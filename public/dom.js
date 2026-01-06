@@ -1,0 +1,79 @@
+export const elements = {
+  loginPanel: document.querySelector("[data-login-panel]"),
+  sessionControls: document.querySelector("[data-session-controls]"),
+  errorTarget: document.querySelector("[data-login-error]"),
+  logoutBtn: document.querySelector("[data-logout]"),
+  copyIdBtn: document.querySelector("[data-copy-id]"),
+  avatarButton: document.querySelector("[data-avatar]"),
+  avatarImg: document.querySelector("[data-avatar-img]"),
+  avatarFallback: document.querySelector("[data-avatar-fallback]"),
+  avatarMenu: document.querySelector("[data-avatar-menu]"),
+  qrModal: document.querySelector("[data-qr-modal]"),
+  qrCloseBtn: document.querySelector("[data-qr-close]"),
+  qrContainer: document.querySelector("[data-qr-container]"),
+  showLoginQrBtn: document.querySelector("[data-show-login-qr]"),
+  exportSecretBtn: document.querySelector("[data-export-secret]"),
+  viewProfileBtn: document.querySelector("[data-view-profile]"),
+  // PIN modal elements
+  pinModal: document.querySelector("[data-pin-modal]"),
+  pinCloseBtn: document.querySelector("[data-pin-close]"),
+  pinTitle: document.querySelector("[data-pin-title]"),
+  pinDescription: document.querySelector("[data-pin-description]"),
+  pinDisplay: document.querySelector("[data-pin-display]"),
+  pinDots: document.querySelectorAll("[data-pin-dot]"),
+  pinError: document.querySelector("[data-pin-error]"),
+  pinKeypad: document.querySelector("[data-pin-keypad]"),
+  // Profile modal elements
+  profileModal: document.querySelector("[data-profile-modal]"),
+  profileCloseBtn: document.querySelector("[data-profile-close]"),
+  profileView: document.querySelector("[data-profile-view]"),
+  profileAvatar: document.querySelector("[data-profile-avatar]"),
+  profileName: document.querySelector("[data-profile-name]"),
+  profileNip05: document.querySelector("[data-profile-nip05]"),
+  profileAbout: document.querySelector("[data-profile-about]"),
+  profileNpub: document.querySelector("[data-profile-npub]"),
+  profileEditBtn: document.querySelector("[data-profile-edit-btn]"),
+  profileEditForm: document.querySelector("[data-profile-edit-form]"),
+  profileEditName: document.querySelector("[data-profile-edit-name]"),
+  profileEditAbout: document.querySelector("[data-profile-edit-about]"),
+  profileEditPicture: document.querySelector("[data-profile-edit-picture]"),
+  profileEditStatus: document.querySelector("[data-profile-edit-status]"),
+  profileEditCancel: document.querySelector("[data-profile-edit-cancel]"),
+  // Tab navigation
+  tabNav: document.querySelector("[data-tab-nav]"),
+  // Track panel elements
+  trackPanel: document.querySelector("[data-track-panel]"),
+  trackDate: document.querySelector("[data-track-date]"),
+  prevDayBtn: document.querySelector("[data-prev-day]"),
+  nextDayBtn: document.querySelector("[data-next-day]"),
+  trackList: document.querySelector("[data-track-list]"),
+  trackEmpty: document.querySelector("[data-track-empty]"),
+  // Measures panel elements
+  measuresPanel: document.querySelector("[data-measures-panel]"),
+  measuresList: document.querySelector("[data-measures-list]"),
+  addMeasureBtn: document.querySelector("[data-add-measure]"),
+  // Measure modal elements
+  measureModal: document.querySelector("[data-measure-modal]"),
+  measureModalTitle: document.querySelector("[data-measure-modal-title]"),
+  measureForm: document.querySelector("[data-measure-form]"),
+  measureId: document.querySelector("[data-measure-id]"),
+  measureName: document.querySelector("[data-measure-name]"),
+  measureType: document.querySelector("[data-measure-type]"),
+  measureEncrypted: document.querySelector("[data-measure-encrypted]"),
+  measureError: document.querySelector("[data-measure-error]"),
+  measureClose: document.querySelector("[data-measure-close]"),
+  measureCancel: document.querySelector("[data-measure-cancel]"),
+  measureSubmit: document.querySelector("[data-measure-submit]"),
+  // Results panel elements
+  resultsPanel: document.querySelector("[data-results-panel]"),
+  resultsList: document.querySelector("[data-results-list]"),
+  resultsLoading: document.querySelector("[data-results-loading]"),
+  resultsLoadMore: document.querySelector("[data-results-load-more]"),
+  loadMoreResultsBtn: document.querySelector("[data-load-more-results]"),
+};
+
+export const show = (el) => el?.removeAttribute("hidden");
+export const hide = (el) => el?.setAttribute("hidden", "hidden");
+export const setText = (el, text) => {
+  if (el) el.textContent = text;
+};
