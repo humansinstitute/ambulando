@@ -7,7 +7,7 @@ export const ENCRYPTED_SECRET_KEY = "nostr_encrypted_secret";
 export const ENCRYPTED_BUNKER_KEY = "nostr_encrypted_bunker";
 export const BUNKER_CONNECTION_KEY = "nostr_bunker_connection";
 export const PROFILE_CACHE_KEY = "nostr_profile_cache";
-export const APP_TAG = "three-things";
+export const APP_TAG = "ambulando";
 
 export const getRelays = () => {
   return window.__NOSTR_RELAYS__ || DEFAULT_RELAYS;
