@@ -37,7 +37,7 @@ export type Entry = {
   updated_at: string;
 };
 
-export type MeasureType = "number" | "text" | "goodbad" | "time";
+export type MeasureType = "number" | "text" | "goodbad" | "time" | "options" | "rating";
 
 export type Measure = {
   id: number;
@@ -46,6 +46,7 @@ export type Measure = {
   type: MeasureType;
   encrypted: number; // 0 or 1
   sort_order: number;
+  config: string | null; // JSON config for options type (e.g., ["Option1", "Option2"])
   created_at: string;
 };
 
@@ -124,10 +125,13 @@ db.run(`
     type TEXT NOT NULL,
     encrypted INTEGER NOT NULL DEFAULT 1,
     sort_order INTEGER NOT NULL DEFAULT 0,
+    config TEXT DEFAULT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(owner, name)
   )
 `);
+// Migration for existing tables
+addColumn("ALTER TABLE measures ADD COLUMN config TEXT DEFAULT NULL");
 
 // Tracked data points
 db.run(`
@@ -415,17 +419,18 @@ const getMeasureByIdStmt = db.query<Measure>(
 );
 
 const upsertMeasureStmt = db.query<Measure>(
-  `INSERT INTO measures (owner, name, type, encrypted, sort_order)
-   VALUES (?, ?, ?, ?, ?)
+  `INSERT INTO measures (owner, name, type, encrypted, sort_order, config)
+   VALUES (?, ?, ?, ?, ?, ?)
    ON CONFLICT(owner, name) DO UPDATE SET
      type = excluded.type,
      encrypted = excluded.encrypted,
-     sort_order = excluded.sort_order
+     sort_order = excluded.sort_order,
+     config = excluded.config
    RETURNING *`
 );
 
 const updateMeasureStmt = db.query<Measure>(
-  `UPDATE measures SET name = ?, type = ?, encrypted = ?, sort_order = ?
+  `UPDATE measures SET name = ?, type = ?, encrypted = ?, sort_order = ?, config = ?
    WHERE id = ? AND owner = ?
    RETURNING *`
 );
@@ -454,7 +459,8 @@ export function upsertMeasure(
   name: string,
   type: MeasureType,
   encrypted: boolean,
-  sortOrder: number = 0
+  sortOrder: number = 0,
+  config: string | null = null
 ): Measure | null {
   if (!owner || !name || !type) return null;
   const measure = upsertMeasureStmt.get(
@@ -462,7 +468,8 @@ export function upsertMeasure(
     name.trim(),
     type,
     encrypted ? 1 : 0,
-    sortOrder
+    sortOrder,
+    config
   ) as Measure | undefined;
   return measure ?? null;
 }
@@ -473,7 +480,8 @@ export function updateMeasure(
   name: string,
   type: MeasureType,
   encrypted: boolean,
-  sortOrder: number
+  sortOrder: number,
+  config: string | null = null
 ): Measure | null {
   if (!owner || !name || !type) return null;
   const measure = updateMeasureStmt.get(
@@ -481,6 +489,7 @@ export function updateMeasure(
     type,
     encrypted ? 1 : 0,
     sortOrder,
+    config,
     id,
     owner
   ) as Measure | undefined;

@@ -8,6 +8,8 @@ let measures = [];
 let trackingData = {}; // Map of measureId -> tracking record
 let currentDate = new Date();
 let timerIntervals = {}; // Map of measureId -> interval ID
+let activeTimerInterval = null; // Interval for banner timer
+let activeTimerData = null; // Currently active timer from server
 
 export async function initTracker() {
   if (!state.session) return;
@@ -16,10 +18,14 @@ export async function initTracker() {
   el.prevDayBtn?.addEventListener("click", () => navigateDate(-1));
   el.nextDayBtn?.addEventListener("click", () => navigateDate(1));
 
+  // Wire up active timer banner "View" button
+  el.activeTimerGoto?.addEventListener("click", handleActiveTimerGoto);
+
   // Listen for tab switches
   window.addEventListener("tab-switched", (e) => {
     if (e.detail.tab === "track") {
       void loadTrackingData();
+      void loadActiveTimer();
     }
   });
 
@@ -30,6 +36,7 @@ export async function initTracker() {
 
   // Initial load
   await loadMeasuresAndRender();
+  await loadActiveTimer();
 }
 
 async function loadMeasuresAndRender() {
@@ -549,6 +556,9 @@ async function startTimer(measureId) {
       wireUpInputHandlers();
     }
   }
+
+  // Refresh active timer banner
+  await loadActiveTimer();
 }
 
 async function stopTimer(measureId) {
@@ -590,6 +600,9 @@ async function stopTimer(measureId) {
       wireUpInputHandlers();
     }
   }
+
+  // Refresh active timer banner (will hide it since timer is stopped)
+  await loadActiveTimer();
 }
 
 async function saveBackdatedStart(measureId) {
@@ -688,4 +701,85 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ============================================================
+// Active Timer Banner
+// ============================================================
+
+async function loadActiveTimer() {
+  if (!state.session) return;
+
+  try {
+    const response = await fetch("/tracking/active-timer");
+    if (!response.ok) throw new Error("Failed to fetch active timer");
+
+    const data = await response.json();
+    activeTimerData = data.timer;
+
+    if (activeTimerData) {
+      // Decrypt the value if the measure is encrypted
+      const measure = measures.find((m) => m.id === activeTimerData.measure_id);
+      if (measure?.encrypted && activeTimerData.value) {
+        try {
+          const decrypted = await decryptEntry(activeTimerData.value);
+          activeTimerData.decryptedValue = JSON.parse(decrypted);
+        } catch (err) {
+          console.error("Failed to decrypt active timer:", err);
+          activeTimerData = null;
+        }
+      } else {
+        try {
+          activeTimerData.decryptedValue = JSON.parse(activeTimerData.value);
+        } catch (_err) {
+          activeTimerData.decryptedValue = activeTimerData.value;
+        }
+      }
+      activeTimerData.measureName = measure?.name || "Timer";
+    }
+
+    updateActiveTimerBanner();
+  } catch (err) {
+    console.error("Failed to load active timer:", err);
+    activeTimerData = null;
+    updateActiveTimerBanner();
+  }
+}
+
+function updateActiveTimerBanner() {
+  if (!activeTimerData?.decryptedValue?.start) {
+    hide(el.activeTimerBanner);
+    if (activeTimerInterval) {
+      clearInterval(activeTimerInterval);
+      activeTimerInterval = null;
+    }
+    return;
+  }
+
+  // Show banner
+  show(el.activeTimerBanner);
+  setText(el.activeTimerName, activeTimerData.measureName);
+
+  // Update duration display
+  const updateDuration = () => {
+    const elapsed = getElapsedSeconds(activeTimerData.decryptedValue.start);
+    setText(el.activeTimerDuration, formatDuration(elapsed));
+  };
+
+  updateDuration();
+
+  // Start interval to update duration
+  if (activeTimerInterval) {
+    clearInterval(activeTimerInterval);
+  }
+  activeTimerInterval = setInterval(updateDuration, 1000);
+}
+
+function handleActiveTimerGoto() {
+  if (!activeTimerData?.decryptedValue?.start) return;
+
+  // Navigate to the date when the timer was started
+  const startDate = new Date(activeTimerData.decryptedValue.start);
+  currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  void loadTrackingData();
 }

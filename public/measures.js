@@ -10,6 +10,8 @@ const TYPE_LABELS = {
   number: "Number",
   text: "Text",
   goodbad: "Good/Bad",
+  options: "Multiple choice",
+  rating: "Rating (1-10)",
   time: "Time tracker",
 };
 
@@ -26,6 +28,9 @@ export async function initMeasures() {
   // Wire up form submission
   el.measureForm?.addEventListener("submit", handleSaveMeasure);
 
+  // Wire up type change to show/hide options config
+  el.measureType?.addEventListener("change", handleTypeChange);
+
   // Close modal on backdrop click
   el.measureModal?.addEventListener("click", (e) => {
     if (e.target === el.measureModal) closeModal();
@@ -40,6 +45,15 @@ export async function initMeasures() {
 
   // Load measures initially
   await loadMeasures();
+}
+
+function handleTypeChange() {
+  const type = el.measureType?.value;
+  if (type === "options") {
+    show(el.measureOptionsConfig);
+  } else {
+    hide(el.measureOptionsConfig);
+  }
 }
 
 export async function loadMeasures() {
@@ -113,6 +127,8 @@ function openAddModal() {
   el.measureForm?.reset();
   if (el.measureId) el.measureId.value = "";
   if (el.measureEncrypted) el.measureEncrypted.checked = true;
+  if (el.measureOptions) el.measureOptions.value = "";
+  hide(el.measureOptionsConfig);
   hide(el.measureError);
   show(el.measureModal);
   el.measureName?.focus();
@@ -125,6 +141,21 @@ function openEditModal(measure) {
   if (el.measureName) el.measureName.value = measure.name;
   if (el.measureType) el.measureType.value = measure.type;
   if (el.measureEncrypted) el.measureEncrypted.checked = !!measure.encrypted;
+
+  // Handle options config
+  if (measure.type === "options" && measure.config) {
+    show(el.measureOptionsConfig);
+    try {
+      const opts = JSON.parse(measure.config);
+      if (el.measureOptions) el.measureOptions.value = opts.join(", ");
+    } catch (_err) {
+      if (el.measureOptions) el.measureOptions.value = "";
+    }
+  } else {
+    hide(el.measureOptionsConfig);
+    if (el.measureOptions) el.measureOptions.value = "";
+  }
+
   hide(el.measureError);
   show(el.measureModal);
   el.measureName?.focus();
@@ -149,6 +180,22 @@ async function handleSaveMeasure(e) {
     return;
   }
 
+  // Parse options config if type is options
+  let config = null;
+  if (type === "options") {
+    const optionsStr = el.measureOptions?.value?.trim();
+    if (!optionsStr) {
+      showError("Options are required for multiple choice type");
+      return;
+    }
+    const opts = optionsStr.split(",").map((o) => o.trim()).filter((o) => o);
+    if (opts.length < 2 || opts.length > 5) {
+      showError("Please provide 2-5 options");
+      return;
+    }
+    config = opts;
+  }
+
   try {
     const response = await fetch("/measures", {
       method: "POST",
@@ -158,6 +205,7 @@ async function handleSaveMeasure(e) {
         name,
         type,
         encrypted,
+        config,
         sort_order: editingMeasure?.sort_order ?? measures.length,
       }),
     });

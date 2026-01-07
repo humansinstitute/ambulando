@@ -3,6 +3,7 @@ import { initAvatarMenu } from "./avatar.js";
 import { initMeasures } from "./measures.js";
 import { initPullRefresh } from "./pullRefresh.js";
 import { initResults } from "./results.js";
+import { onRefresh, state } from "./state.js";
 import { initTabs, showTabsIfLoggedIn } from "./tabs.js";
 import { initTracker } from "./tracker.js";
 import { initUI } from "./ui.js";
@@ -19,11 +20,30 @@ initUI();
 initAuth();
 initPullRefresh();
 
-// Initialize tracker modules after auth has a chance to set up session
-window.addEventListener("load", () => {
+// Track if modules have been initialized
+let modulesInitialized = false;
+
+const initTrackerModules = () => {
+  if (!state.session) return;
+
   initTabs();
   showTabsIfLoggedIn();
   void initMeasures();
   void initTracker();
   void initResults();
+  modulesInitialized = true;
+};
+
+// Re-initialize modules when session changes (login/logout)
+onRefresh(() => {
+  if (state.session && !modulesInitialized) {
+    initTrackerModules();
+  } else if (!state.session) {
+    modulesInitialized = false;
+  }
+});
+
+// Initialize tracker modules on page load if already logged in
+window.addEventListener("load", () => {
+  initTrackerModules();
 });

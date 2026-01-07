@@ -35,27 +35,35 @@ export async function handleSaveMeasure(req: Request, session: Session | null) {
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
-  const { id, name, type, encrypted, sort_order } = body;
+  const { id, name, type, encrypted, sort_order, config } = body;
 
   if (!name || typeof name !== "string") {
     return jsonResponse({ error: "name required" }, 400);
   }
 
-  const validTypes: MeasureType[] = ["number", "text", "goodbad", "time"];
+  const validTypes: MeasureType[] = ["number", "text", "goodbad", "time", "options", "rating"];
   if (!type || !validTypes.includes(type)) {
-    return jsonResponse({ error: "type must be one of: number, text, goodbad, time" }, 400);
+    return jsonResponse({ error: "type must be one of: number, text, goodbad, time, options, rating" }, 400);
+  }
+
+  // Validate options config
+  if (type === "options") {
+    if (!config || !Array.isArray(config) || config.length < 2 || config.length > 5) {
+      return jsonResponse({ error: "options type requires 2-5 options in config array" }, 400);
+    }
   }
 
   const isEncrypted = encrypted !== false; // default true
   const sortOrder = typeof sort_order === "number" ? sort_order : 0;
+  const configJson = config ? JSON.stringify(config) : null;
 
   let measure;
   if (id) {
     // Update existing
-    measure = updateMeasure(id, session.npub, name, type, isEncrypted, sortOrder);
+    measure = updateMeasure(id, session.npub, name, type, isEncrypted, sortOrder, configJson);
   } else {
     // Create new
-    measure = upsertMeasure(session.npub, name, type, isEncrypted, sortOrder);
+    measure = upsertMeasure(session.npub, name, type, isEncrypted, sortOrder, configJson);
   }
 
   if (!measure) {

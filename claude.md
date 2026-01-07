@@ -14,6 +14,7 @@
 - Lint enforces async/import hygiene (no floating promises, ordered imports) and parses inline `<script>` blocks for syntax errors; fix warnings instead of silencing them.
 - Commit incrementally as you work (not batched at the end) with descriptive messages for easy rollbacks. Do not include self-crediting in commit messages—keep them purely functional.
 - Note the current commit hash at the start of work and after completing changes.
+- Debug logs are written to `temp/logs/session.log` (cleared on each server start). Requires `MODE=dev` in `.env`. Inspect this file to debug client-side issues like bunker login.
 - For schema and ownership details, consult `docs/data_model.md` before changing queries or migrations.
 - For AI agent interactions (fetching tasks, posting summaries), follow `docs/agent_api_spec.md` for endpoints, payloads, and example curls.
 - For UI changes (structure, refresh flow, styling hooks), see `docs/ui.md` to quickly find component markup, state update patterns, and styling entry points.

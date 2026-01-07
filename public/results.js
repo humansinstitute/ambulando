@@ -205,6 +205,16 @@ function formatValue(value, type) {
       }
       return { text: "-", className: "" };
 
+    case "options":
+      return { text: escapeHtml(String(value)), className: "option-value" };
+
+    case "rating":
+      const rating = parseInt(value, 10);
+      if (rating >= 1 && rating <= 10) {
+        return { text: `${rating}/10`, className: "rating-value" };
+      }
+      return { text: "-", className: "" };
+
     default:
       return { text: String(value), className: "" };
   }

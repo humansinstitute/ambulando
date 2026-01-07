@@ -98,6 +98,14 @@ function renderTabNav(session: Session | null) {
 
 function renderTrackPanel(session: Session | null) {
   return `<section class="track-panel" data-track-panel ${session ? "" : "hidden"}>
+    <div class="active-timer-banner" data-active-timer-banner hidden>
+      <div class="active-timer-banner-content">
+        <span class="active-timer-banner-icon">⏱</span>
+        <span class="active-timer-banner-name" data-active-timer-name></span>
+        <span class="active-timer-banner-duration" data-active-timer-duration></span>
+      </div>
+      <button class="active-timer-banner-goto" data-active-timer-goto>View</button>
+    </div>
     <div class="track-date-header">
       <button class="track-nav-btn" data-prev-day aria-label="Previous day">&lt;</button>
       <span class="track-date" data-track-date>Today</span>
