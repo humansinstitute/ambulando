@@ -2,6 +2,7 @@ import {
   APP_NAME,
   APP_TAG,
   COOKIE_SECURE,
+  IS_DEV,
   LOGIN_EVENT_KIND,
   LOGIN_MAX_AGE_SECONDS,
   PORT,
@@ -83,8 +84,8 @@ const server = Bun.serve({
         const deleteMatch = pathname.match(/^\/todos\/(\d+)\/delete$/);
         if (deleteMatch) return handleTodoDelete(session, Number(deleteMatch[1]));
 
-        // Debug log endpoint for client-side logs
-        if (pathname === "/debug/log") {
+        // Debug log endpoint for client-side logs (dev mode only)
+        if (pathname === "/debug/log" && IS_DEV) {
           const body = await req.json() as { source?: string; message?: string; data?: unknown };
           const source = body.source || "client";
           const message = body.message || "";
