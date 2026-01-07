@@ -1,7 +1,17 @@
-import { appendFileSync } from "fs";
-import { join } from "path";
+import { appendFileSync, mkdirSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
 
-const DEBUG_LOG_PATH = join(process.cwd(), "debug.log");
+const SESSION_LOG_PATH = join(process.cwd(), "temp", "logs", "session.log");
+
+// Ensure log directory exists and clear previous session logs
+export function initLogs() {
+  try {
+    mkdirSync(dirname(SESSION_LOG_PATH), { recursive: true });
+    writeFileSync(SESSION_LOG_PATH, `=== Session started at ${new Date().toISOString()} ===\n`);
+  } catch (err) {
+    console.error("Failed to initialize logs:", err);
+  }
+}
 
 export function logInfo(message: string, meta?: Record<string, unknown>) {
   if (meta) console.info(message, meta);
@@ -27,12 +37,12 @@ export function logDebug(source: string, message: string, data?: unknown) {
 
   // Append to file
   try {
-    appendFileSync(DEBUG_LOG_PATH, line);
+    appendFileSync(SESSION_LOG_PATH, line);
   } catch (err) {
     console.error("Failed to write debug log:", err);
   }
 }
 
-export function getDebugLogPath() {
-  return DEBUG_LOG_PATH;
+export function getLogPath() {
+  return SESSION_LOG_PATH;
 }

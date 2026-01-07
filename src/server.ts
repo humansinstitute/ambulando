@@ -9,7 +9,7 @@ import {
   SESSION_MAX_AGE_SECONDS,
 } from "./config";
 import { withErrorHandling } from "./http";
-import { logDebug, logError } from "./logger";
+import { initLogs, logDebug, logError } from "./logger";
 import { handleAiTasks, handleAiTasksPost, handleLatestSummary, handleSummaryPost } from "./routes/ai";
 import { createAuthHandlers } from "./routes/auth";
 import { handleGetEntries, handleGetRecentEntries, handleSaveEntry } from "./routes/entries";
@@ -26,6 +26,9 @@ import {
 } from "./routes/tracking";
 import { AuthService } from "./services/auth";
 import { serveStatic } from "./static";
+
+// Initialize logs (clears previous session)
+initLogs();
 
 const authService = new AuthService(
   SESSION_COOKIE,
