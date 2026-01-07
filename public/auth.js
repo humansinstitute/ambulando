@@ -757,9 +757,17 @@ const signLoginEvent = async (method, supplemental) => {
     debugLog("Parsing bunker input...");
     const pointer = await nip46.parseBunkerInput(bunkerUri);
     if (!pointer) throw new Error("Unable to parse bunker details.");
-    debugLog("Bunker parsed", { pubkey: pointer.pubkey?.slice(0, 12) + "...", relays: pointer.relays });
+
+    // Use relays from pointer plus our defaults for better connectivity
+    const allRelays = [...new Set([...pointer.relays, ...getRelays()])];
+    debugLog("Bunker parsed", { pubkey: pointer.pubkey?.slice(0, 12) + "...", relays: pointer.relays, allRelays });
 
     const clientSecret = pure.generateSecretKey();
+
+    // Create a shared pool with all relays
+    const { pool: poolModule } = await loadNostrLibs();
+    const SimplePool = poolModule.SimplePool;
+    const sharedPool = new SimplePool();
 
     // Create signer with onauth handler for authorization prompts
     const onauth = (authUrl) => {
@@ -772,7 +780,9 @@ const signLoginEvent = async (method, supplemental) => {
       }
     };
 
-    signer = new nip46.BunkerSigner(clientSecret, pointer, { onauth });
+    // Pass shared pool and expanded relay list
+    const pointerWithAllRelays = { ...pointer, relays: allRelays };
+    signer = new nip46.BunkerSigner(clientSecret, pointerWithAllRelays, { pool: sharedPool, onauth });
     debugLog("Connecting to bunker...");
     try {
       await signer.connect();
@@ -796,11 +806,29 @@ const signLoginEvent = async (method, supplemental) => {
     try {
       const unsigned = buildUnsignedEvent(method);
       debugLog("Unsigned event built", { kind: unsigned.kind, tags: unsigned.tags });
-      const signed = await signer.signEvent(unsigned);
-      debugLog("Signature received from bunker");
+
+      // Add timeout wrapper to get more insight
+      const signPromise = signer.signEvent(unsigned);
+      debugLog("signEvent called, awaiting response...");
+
+      const signed = await Promise.race([
+        signPromise,
+        new Promise((_, reject) =>
+          setTimeout(() => {
+            debugLog("signEvent timeout after 90s");
+            reject(new Error("Bunker sign request timed out after 90 seconds"));
+          }, 90000)
+        ),
+      ]);
+
+      debugLog("Signature received from bunker", { hasId: !!signed?.id, hasSig: !!signed?.sig });
       return signed;
     } catch (signErr) {
-      debugLog("Bunker signEvent failed", { error: signErr?.message || String(signErr), name: signErr?.name });
+      debugLog("Bunker signEvent failed", {
+        error: signErr?.message || String(signErr),
+        name: signErr?.name,
+        stack: signErr?.stack?.split("\n").slice(0, 3).join(" | "),
+      });
       throw signErr;
     }
   }
