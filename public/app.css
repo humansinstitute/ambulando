@@ -2136,9 +2136,46 @@ details summary {
   margin-top: 1rem;
 }
 
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
 .results-panel h2 {
-  margin: 0 0 1.5rem;
+  margin: 0;
   font-size: 1.35rem;
+}
+
+.results-view-toggle {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--surface-warm);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem;
+}
+
+.results-view-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.results-view-btn:hover {
+  color: var(--text);
+}
+
+.results-view-btn.active {
+  background: var(--accent);
+  color: var(--surface);
 }
 
 .results-list {
@@ -2227,4 +2264,222 @@ details summary {
 .results-load-more button:hover {
   background: var(--surface);
   border-color: var(--accent);
+}
+
+/* Charts View */
+.charts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.charts-loading,
+.charts-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 2rem 1rem;
+  font-style: italic;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+}
+
+.chart-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.chart-card-name {
+  font-weight: 500;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.chart-card-type {
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 0.2rem 0.5rem;
+  background: var(--surface-warm);
+  border-radius: 999px;
+}
+
+.chart-card-content {
+  min-height: 80px;
+}
+
+.chart-empty {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.chart-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.85rem;
+  color: var(--text-warm);
+}
+
+.chart-stats strong {
+  color: var(--text);
+}
+
+.chart-stats .good-stat strong {
+  color: #22c55e;
+}
+
+.chart-stats .bad-stat strong {
+  color: #ef4444;
+}
+
+/* Line Chart (SVG) */
+.line-chart,
+.rating-chart {
+  width: 100%;
+  height: 100px;
+  display: block;
+}
+
+.rating-chart {
+  height: 80px;
+}
+
+/* Streak Chart (Good/Bad boxes) */
+.streak-chart {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+
+.streak-box {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: var(--border-soft);
+  transition: transform 150ms ease;
+}
+
+.streak-box:hover {
+  transform: scale(1.1);
+}
+
+.streak-box.good {
+  background: #22c55e;
+}
+
+.streak-box.bad {
+  background: #ef4444;
+}
+
+/* Duration Bar Chart */
+.duration-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+  padding-bottom: 20px;
+}
+
+.duration-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.duration-bar {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: height 300ms ease;
+}
+
+.duration-bar-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* Options Frequency Chart */
+.options-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.option-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.option-bar-label {
+  min-width: 80px;
+  font-size: 0.85rem;
+  color: var(--text-warm);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.option-bar-track {
+  flex: 1;
+  height: 20px;
+  background: var(--surface-warm);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.option-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 10px;
+  transition: width 300ms ease;
+}
+
+.option-bar-count {
+  min-width: 30px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  text-align: right;
+}
+
+/* Activity Chart (Text entries) */
+.activity-chart {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+
+.activity-dot {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--border-soft);
+  transition: transform 150ms ease;
+}
+
+.activity-dot:hover {
+  transform: scale(1.2);
+}
+
+.activity-dot.filled {
+  background: var(--accent);
 }

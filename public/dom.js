@@ -73,10 +73,14 @@ export const elements = {
   measureSubmit: document.querySelector("[data-measure-submit]"),
   // Results panel elements
   resultsPanel: document.querySelector("[data-results-panel]"),
+  resultsViewToggle: document.querySelector("[data-results-view-toggle]"),
+  resultsHistoryView: document.querySelector("[data-results-history-view]"),
+  resultsChartsView: document.querySelector("[data-results-charts-view]"),
   resultsList: document.querySelector("[data-results-list]"),
   resultsLoading: document.querySelector("[data-results-loading]"),
   resultsLoadMore: document.querySelector("[data-results-load-more]"),
   loadMoreResultsBtn: document.querySelector("[data-load-more-results]"),
+  chartsList: document.querySelector("[data-charts-list]"),
 };
 
 export const show = (el) => el?.removeAttribute("hidden");

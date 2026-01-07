@@ -128,12 +128,25 @@ function renderMeasuresPanel(_session: Session | null) {
 
 function renderResultsPanel(_session: Session | null) {
   return `<section class="results-panel" data-results-panel hidden>
-    <h2>History</h2>
-    <div class="results-list" data-results-list>
-      <p class="results-loading" data-results-loading>Loading...</p>
+    <div class="results-header">
+      <h2>Results</h2>
+      <div class="results-view-toggle" data-results-view-toggle>
+        <button class="results-view-btn active" data-results-view="history">History</button>
+        <button class="results-view-btn" data-results-view="charts">Charts</button>
+      </div>
     </div>
-    <div class="results-load-more" data-results-load-more hidden>
-      <button type="button" data-load-more-results>Load more</button>
+    <div class="results-history-view" data-results-history-view>
+      <div class="results-list" data-results-list>
+        <p class="results-loading" data-results-loading>Loading...</p>
+      </div>
+      <div class="results-load-more" data-results-load-more hidden>
+        <button type="button" data-load-more-results>Load more</button>
+      </div>
+    </div>
+    <div class="results-charts-view" data-results-charts-view hidden>
+      <div class="charts-list" data-charts-list>
+        <p class="charts-loading">Loading charts...</p>
+      </div>
     </div>
   </section>`;
 }
