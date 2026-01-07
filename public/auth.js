@@ -760,7 +760,19 @@ const signLoginEvent = async (method, supplemental) => {
     debugLog("Bunker parsed", { pubkey: pointer.pubkey?.slice(0, 12) + "...", relays: pointer.relays });
 
     const clientSecret = pure.generateSecretKey();
-    signer = new nip46.BunkerSigner(clientSecret, pointer);
+
+    // Create signer with onauth handler for authorization prompts
+    const onauth = (authUrl) => {
+      debugLog("Bunker auth URL received", { url: authUrl });
+      // On mobile, window.open may be blocked - show user the URL
+      const opened = window.open(authUrl, "_blank");
+      if (!opened) {
+        // Popup was blocked, prompt user to open manually
+        alert(`Please open this URL to authorize:\n\n${authUrl}`);
+      }
+    };
+
+    signer = new nip46.BunkerSigner(clientSecret, pointer, { onauth });
     debugLog("Connecting to bunker...");
     try {
       await signer.connect();
