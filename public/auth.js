@@ -781,9 +781,16 @@ const signLoginEvent = async (method, supplemental) => {
     }
 
     debugLog("Requesting signature from bunker...");
-    const signed = await signer.signEvent(buildUnsignedEvent(method));
-    debugLog("Signature received from bunker");
-    return signed;
+    try {
+      const unsigned = buildUnsignedEvent(method);
+      debugLog("Unsigned event built", { kind: unsigned.kind, tags: unsigned.tags });
+      const signed = await signer.signEvent(unsigned);
+      debugLog("Signature received from bunker");
+      return signed;
+    } catch (signErr) {
+      debugLog("Bunker signEvent failed", { error: signErr?.message || String(signErr), name: signErr?.name });
+      throw signErr;
+    }
   }
 
   if (method === "secret") {
