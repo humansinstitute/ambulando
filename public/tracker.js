@@ -711,7 +711,7 @@ async function loadActiveTimer() {
   if (!state.session) return;
 
   try {
-    const response = await fetch("/tracking/active-timer");
+    const response = await fetch("/tracking/timer");
     if (!response.ok) throw new Error("Failed to fetch active timer");
 
     const data = await response.json();

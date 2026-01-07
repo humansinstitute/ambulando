@@ -32,6 +32,11 @@ async function deriveKey(pin, salt) {
 
 // Encrypt a string with a PIN, returns base64-encoded result
 export async function encryptWithPin(plaintext, pin) {
+  // Check if Web Crypto is available (requires secure context or localhost)
+  if (!crypto.subtle) {
+    throw new Error("Web Crypto API not available. HTTPS required for encryption.");
+  }
+
   const encoder = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));

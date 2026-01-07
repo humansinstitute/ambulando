@@ -215,7 +215,9 @@ async function handlePinComplete() {
           }
         } else if (pendingBunkerUri) {
           // Encrypting a bunker URI
+          debugLog("Encrypting bunker URI...", {}, "PIN");
           const encrypted = await encryptWithPin(pendingBunkerUri, currentPin);
+          debugLog("Bunker URI encrypted successfully", { encryptedLength: encrypted.length }, "PIN");
           storeEncryptedBunker(encrypted);
           memoryBunkerUri = pendingBunkerUri;
           saveBunkerUriToSession(memoryBunkerUri);
@@ -227,6 +229,8 @@ async function handlePinComplete() {
           }
         }
       } catch (err) {
+        debugLog("Encryption failed", { error: err.message, pendingBunkerUri: !!pendingBunkerUri, pendingSecretHex: !!pendingSecretHex }, "PIN");
+        console.error("PIN encryption error:", err);
         showPinError("Failed to encrypt. Try again.");
         resetPinEntry();
       }
