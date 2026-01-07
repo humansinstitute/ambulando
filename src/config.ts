@@ -14,6 +14,7 @@ export const PUBLIC_DIR = join(import.meta.dir, "../public");
 
 export const DEFAULT_RELAYS = [
   "wss://relay.nsec.app",
+  "wss://relay.primal.net",
   "wss://nos.lol",
   "wss://relay.damus.io",
   "wss://relay.devvul.com",
