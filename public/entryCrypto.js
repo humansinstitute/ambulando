@@ -74,9 +74,9 @@ export async function encryptEntry(content) {
 
     if (!signer) throw new Error("No bunker connection available");
 
-    // BunkerSigner should have nip44 encrypt method
-    if (typeof signer.encrypt === "function") {
-      return await signer.encrypt(pubkey, content);
+    // BunkerSigner uses nip44Encrypt method (not encrypt)
+    if (typeof signer.nip44Encrypt === "function") {
+      return await signer.nip44Encrypt(pubkey, content);
     }
 
     throw new Error("Bunker does not support NIP-44 encryption");
@@ -144,9 +144,9 @@ export async function decryptEntry(ciphertext) {
 
     if (!signer) throw new Error("No bunker connection available");
 
-    // BunkerSigner should have nip44 decrypt method
-    if (typeof signer.decrypt === "function") {
-      return await signer.decrypt(pubkey, ciphertext);
+    // BunkerSigner uses nip44Decrypt method (not decrypt)
+    if (typeof signer.nip44Decrypt === "function") {
+      return await signer.nip44Decrypt(pubkey, ciphertext);
     }
 
     throw new Error("Bunker does not support NIP-44 decryption");
