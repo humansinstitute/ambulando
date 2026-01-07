@@ -68,7 +68,7 @@ function renderAuth(session: Session | null) {
     <h2>Welcome to Ambulando</h2>
     <p class="auth-description">Track your daily habits, metrics, and progress. Private and encrypted.</p>
     <div class="auth-actions">
-      <button class="auth-option" type="button" data-login-method="ephemeral">Start Anon</button>
+      <button class="auth-option" type="button" data-login-method="ephemeral">Ambulando... Anon</button>
       <button class="auth-option" type="button" data-login-method="extension">Browser Extension</button>
     </div>
     <details class="auth-advanced">
