@@ -86,19 +86,24 @@ const wireForms = () => {
 
   bunkerForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    debugLog("Bunker form submitted");
     const input = bunkerForm.querySelector("input[name='bunker']");
     if (!input?.value.trim()) {
       showError("Enter a bunker nostrconnect URI or NIP-05 handle.");
       return;
     }
     const bunkerUri = input.value.trim();
+    debugLog("Bunker URI entered", { uri: bunkerUri.slice(0, 30) + "..." });
     bunkerForm.classList.add("is-busy");
     clearError();
     try {
       const signedEvent = await signLoginEvent("bunker", bunkerUri);
+      debugLog("Bunker signed event received");
       await completeLogin("bunker", signedEvent, bunkerUri);
+      debugLog("Bunker login complete");
       input.value = "";
     } catch (err) {
+      debugLog("Bunker login error", { error: err?.message });
       console.error(err);
       showError(err?.message || "Unable to connect to bunker.");
     } finally {
@@ -719,13 +724,15 @@ const signLoginEvent = async (method, supplemental) => {
   }
 
   if (method === "bunker") {
+    debugLog("signLoginEvent: bunker method");
     const { pure, nip46 } = await loadNostrLibs();
+    debugLog("Nostr libs loaded");
 
     // Check if we have an active bunker signer in memory
     let signer = getMemoryBunkerSigner();
 
     if (signer) {
-      // Use existing signer
+      debugLog("Using existing signer from memory");
       return await signer.signEvent(buildUnsignedEvent(method));
     }
 
@@ -733,12 +740,12 @@ const signLoginEvent = async (method, supplemental) => {
     let bunkerUri = supplemental;
 
     if (!bunkerUri) {
-      // Check if we have a stored bunker URI in memory
       bunkerUri = getMemoryBunkerUri();
+      if (bunkerUri) debugLog("Using bunker URI from memory");
     }
 
     if (!bunkerUri && hasEncryptedBunker()) {
-      // Prompt for PIN to decrypt stored bunker URI
+      debugLog("Prompting PIN for encrypted bunker");
       bunkerUri = await promptPinForBunkerDecrypt();
     }
 
@@ -747,12 +754,16 @@ const signLoginEvent = async (method, supplemental) => {
     }
 
     // Parse and connect to bunker
+    debugLog("Parsing bunker input...");
     const pointer = await nip46.parseBunkerInput(bunkerUri);
     if (!pointer) throw new Error("Unable to parse bunker details.");
+    debugLog("Bunker parsed", { pubkey: pointer.pubkey?.slice(0, 12) + "...", relays: pointer.relays });
 
     const clientSecret = pure.generateSecretKey();
     signer = new nip46.BunkerSigner(clientSecret, pointer);
+    debugLog("Connecting to bunker...");
     await signer.connect();
+    debugLog("Bunker connected!");
 
     // Store the signer in memory for future use
     setMemoryBunkerSigner(signer);
@@ -764,7 +775,10 @@ const signLoginEvent = async (method, supplemental) => {
       // The PIN prompt will happen after the login event is signed
     }
 
-    return await signer.signEvent(buildUnsignedEvent(method));
+    debugLog("Requesting signature from bunker...");
+    const signed = await signer.signEvent(buildUnsignedEvent(method));
+    debugLog("Signature received from bunker");
+    return signed;
   }
 
   if (method === "secret") {
