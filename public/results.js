@@ -9,7 +9,7 @@ let historyData = [];
 let chartData = []; // Data for charts (30 days)
 let isLoading = false;
 let hasMore = true;
-let currentView = "history"; // "history" or "charts"
+let currentView = "charts"; // "history" or "charts"
 const PAGE_SIZE = 50;
 const CHART_DAYS = 30;
 
@@ -25,10 +25,10 @@ export async function initResults() {
   // Listen for tab switches
   window.addEventListener("tab-switched", (e) => {
     if (e.detail.tab === "results") {
-      if (currentView === "history") {
-        void loadResults();
-      } else {
+      if (currentView === "charts") {
         void loadChartData();
+      } else {
+        void loadResults();
       }
     }
   });

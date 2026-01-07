@@ -131,11 +131,11 @@ function renderResultsPanel(_session: Session | null) {
     <div class="results-header">
       <h2>Results</h2>
       <div class="results-view-toggle" data-results-view-toggle>
-        <button class="results-view-btn active" data-results-view="history">History</button>
-        <button class="results-view-btn" data-results-view="charts">Charts</button>
+        <button class="results-view-btn" data-results-view="history">History</button>
+        <button class="results-view-btn active" data-results-view="charts">Charts</button>
       </div>
     </div>
-    <div class="results-history-view" data-results-history-view>
+    <div class="results-history-view" data-results-history-view hidden>
       <div class="results-list" data-results-list>
         <p class="results-loading" data-results-loading>Loading...</p>
       </div>
@@ -143,7 +143,7 @@ function renderResultsPanel(_session: Session | null) {
         <button type="button" data-load-more-results>Load more</button>
       </div>
     </div>
-    <div class="results-charts-view" data-results-charts-view hidden>
+    <div class="results-charts-view" data-results-charts-view>
       <div class="charts-list" data-charts-list>
         <p class="charts-loading">Loading charts...</p>
       </div>
