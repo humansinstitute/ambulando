@@ -1,4 +1,5 @@
 // PIN entry modal handling
+import { debugLog } from "./debug-log.js";
 import { elements as el, hide, show } from "./dom.js";
 import {
   encryptWithPin,
@@ -173,7 +174,7 @@ function handleKeyPress(key) {
   if (currentPin.length >= PIN_LENGTH) return;
 
   currentPin += key;
-  console.log("[PIN] Key pressed", { key, currentPinLength: currentPin.length });
+  debugLog("Key pressed", { key: "***", currentPinLength: currentPin.length }, "PIN");
   updatePinDisplay();
 
   if (currentPin.length === PIN_LENGTH) {
@@ -193,10 +194,10 @@ function updatePinDisplay() {
 }
 
 async function handlePinComplete() {
-  console.log("[PIN] handlePinComplete", { isConfirmMode, currentPin, firstPin, pendingBunkerUri: !!pendingBunkerUri, pendingSecretHex: !!pendingSecretHex });
+  debugLog("handlePinComplete", { isConfirmMode, pinLength: currentPin.length, firstPinLength: firstPin.length, pendingBunkerUri: !!pendingBunkerUri, pendingSecretHex: !!pendingSecretHex }, "PIN");
   if (isConfirmMode) {
     // We're confirming the PIN
-    console.log("[PIN] Confirm mode - comparing PINs", { match: currentPin === firstPin });
+    debugLog("Confirm mode - comparing PINs", { match: currentPin === firstPin }, "PIN");
     if (currentPin === firstPin) {
       // PINs match - encrypt and store
       try {
@@ -245,7 +246,7 @@ async function handlePinComplete() {
     updatePinTitle("Confirm PIN", "Enter the same PIN again to confirm");
   } else if (pendingBunkerUri) {
     // First PIN entry for new bunker - need confirmation
-    console.log("[PIN] First PIN entered for bunker, storing and requesting confirm", { firstPin: currentPin });
+    debugLog("First PIN entered for bunker, requesting confirm", { pinLength: currentPin.length }, "PIN");
     firstPin = currentPin;
     isConfirmMode = true;
     resetPinEntry();

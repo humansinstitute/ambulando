@@ -2,18 +2,18 @@
 
 const LOG_ENDPOINT = "/debug/log";
 
-export function debugLog(message, data) {
+export function debugLog(message, data, source = "Bunker") {
   const entry = {
-    source: "Bunker",
+    source,
     message,
     data,
   };
 
   // Log to console
   if (data) {
-    console.log(`[Bunker] ${message}`, data);
+    console.log(`[${source}] ${message}`, data);
   } else {
-    console.log(`[Bunker] ${message}`);
+    console.log(`[${source}] ${message}`);
   }
 
   // Send immediately (fire and forget)
