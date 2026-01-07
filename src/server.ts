@@ -9,7 +9,7 @@ import {
   SESSION_MAX_AGE_SECONDS,
 } from "./config";
 import { withErrorHandling } from "./http";
-import { logError } from "./logger";
+import { logDebug, logError } from "./logger";
 import { handleAiTasks, handleAiTasksPost, handleLatestSummary, handleSummaryPost } from "./routes/ai";
 import { createAuthHandlers } from "./routes/auth";
 import { handleGetEntries, handleGetRecentEntries, handleSaveEntry } from "./routes/entries";
@@ -79,6 +79,15 @@ const server = Bun.serve({
 
         const deleteMatch = pathname.match(/^\/todos\/(\d+)\/delete$/);
         if (deleteMatch) return handleTodoDelete(session, Number(deleteMatch[1]));
+
+        // Debug log endpoint for client-side logs
+        if (pathname === "/debug/log") {
+          const body = await req.json() as { source?: string; message?: string; data?: unknown };
+          const source = body.source || "client";
+          const message = body.message || "";
+          logDebug(source, message, body.data);
+          return new Response("ok", { status: 200 });
+        }
       }
 
       if (req.method === "DELETE") {

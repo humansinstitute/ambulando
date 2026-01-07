@@ -5,6 +5,7 @@ import {
   EPHEMERAL_SECRET_KEY,
   getRelays,
 } from "./constants.js";
+import { debugLog } from "./debug-log.js";
 import { closeAvatarMenu, clearCachedProfile, updateAvatar } from "./avatar.js";
 import { elements as el, hide, show } from "./dom.js";
 import { initEntries } from "./entries.js";
@@ -256,7 +257,7 @@ const wireNostrConnectModal = () => {
 };
 
 const openNostrConnectModal = async () => {
-  console.log("[Bunker] Opening Nostr Connect modal");
+  debugLog("Opening Nostr Connect modal");
   const modal = document.querySelector("[data-nostr-connect-modal]");
   const qrContainer = document.querySelector("[data-nostr-connect-qr]");
   const uriInput = document.querySelector("[data-nostr-connect-uri]");
@@ -264,7 +265,7 @@ const openNostrConnectModal = async () => {
   const timerEl = document.querySelector("[data-nostr-connect-timer]");
 
   if (!modal || !qrContainer || !uriInput) {
-    console.error("[Bunker] Missing modal elements", { modal: !!modal, qrContainer: !!qrContainer, uriInput: !!uriInput });
+    debugLog("Missing modal elements", { modal: !!modal, qrContainer: !!qrContainer, uriInput: !!uriInput });
     return;
   }
 
@@ -301,7 +302,7 @@ const openNostrConnectModal = async () => {
     if (appFavicon) params.append("image", appFavicon);
 
     const connectUri = `nostrconnect://${clientPubkey}?${params.toString()}`;
-    console.log("[Bunker] Generated URI", { clientPubkey, relays, secret: secret.slice(0, 8) + "..." });
+    debugLog("Generated URI", { clientPubkey, relays, secret: secret.slice(0, 8) + "..." });
 
     // Display QR code
     const canvas = document.createElement("canvas");
@@ -313,13 +314,13 @@ const openNostrConnectModal = async () => {
 
     // Start countdown timer (120 seconds - increased for slower bunkers)
     let remaining = 120;
-    console.log("[Bunker] Starting countdown timer:", remaining, "seconds");
+    debugLog("Starting countdown timer", { seconds: remaining });
     if (timerEl) timerEl.textContent = `${remaining}s remaining`;
     nostrConnectTimer = setInterval(() => {
       remaining--;
       if (timerEl) timerEl.textContent = `${remaining}s remaining`;
       if (remaining <= 0) {
-        console.log("[Bunker] Timer expired, closing modal");
+        debugLog("Timer expired, closing modal");
         closeNostrConnectModal();
       }
     }, 1000);
@@ -364,49 +365,49 @@ const openNostrConnectModal = async () => {
 };
 
 const waitForNostrConnect = async (poolModule, pure, clientSecretKey, clientPubkey, expectedSecret, relays, signal) => {
-  console.log("[Bunker] waitForNostrConnect started, subscribing to relays:", relays);
+  debugLog("waitForNostrConnect started", { relays });
   const { nip44 } = await loadNostrLibs();
   const SimplePool = poolModule.SimplePool;
   const pool = new SimplePool();
 
   return new Promise((resolve, reject) => {
     signal.addEventListener("abort", () => {
-      console.log("[Bunker] Subscription aborted");
+      debugLog("Subscription aborted");
       pool.close(relays);
       reject(new DOMException("Aborted", "AbortError"));
     });
 
     const filter = { kinds: [24133], "#p": [clientPubkey], since: Math.floor(Date.now() / 1000) - 10 };
-    console.log("[Bunker] Subscribing with filter:", filter);
+    debugLog("Subscribing with filter", filter);
 
     const sub = pool.subscribeMany(
       relays,
       [filter],
       {
         onevent: async (event) => {
-          console.log("[Bunker] Received event from:", event.pubkey.slice(0, 12) + "...", "kind:", event.kind);
+          debugLog("Received event", { from: event.pubkey.slice(0, 12) + "...", kind: event.kind });
           try {
             // Decrypt the message using NIP-44
             const conversationKey = nip44.v2.utils.getConversationKey(clientSecretKey, event.pubkey);
             const decrypted = nip44.v2.decrypt(event.content, conversationKey);
             const message = JSON.parse(decrypted);
-            console.log("[Bunker] Decrypted message:", { method: message.method, result: message.result, id: message.id });
+            debugLog("Decrypted message", { method: message.method, result: message.result, id: message.id });
 
             // Handle "connect" response
             if (message.result === "ack" || message.method === "connect") {
-              console.log("[Bunker] Got connect/ack response");
+              debugLog("Got connect/ack response");
               // Verify secret if present
               const msgSecret = message.params?.[1] || message.secret;
               if (msgSecret && msgSecret !== expectedSecret) {
-                console.warn("[Bunker] Secret mismatch, ignoring connection");
+                debugLog("Secret mismatch, ignoring connection");
                 return;
               }
 
               const remoteSignerPubkey = event.pubkey;
-              console.log("[Bunker] Remote signer pubkey:", remoteSignerPubkey.slice(0, 12) + "...");
+              debugLog("Remote signer pubkey", { pubkey: remoteSignerPubkey.slice(0, 12) + "..." });
 
               // Request get_public_key
-              console.log("[Bunker] Requesting get_public_key...");
+              debugLog("Requesting get_public_key...");
               const userPubkey = await requestFromSigner(
                 pool,
                 poolModule,
@@ -419,8 +420,8 @@ const waitForNostrConnect = async (poolModule, pure, clientSecretKey, clientPubk
               );
 
               // Request sign_event for login
-              console.log("[Bunker] Got user pubkey:", userPubkey?.slice(0, 12) + "...");
-              console.log("[Bunker] Requesting sign_event...");
+              debugLog("Got user pubkey", { pubkey: userPubkey?.slice(0, 12) + "..." });
+              debugLog("Requesting sign_event...");
               const unsignedEvent = buildUnsignedEvent("bunker");
               unsignedEvent.pubkey = userPubkey;
 
@@ -449,7 +450,7 @@ const waitForNostrConnect = async (poolModule, pure, clientSecretKey, clientPubk
           }
         },
         oneose: () => {
-          console.log("[Bunker] End of stored events, listening for new ones...");
+          debugLog("End of stored events, listening for new ones...");
         },
       }
     );
@@ -457,12 +458,12 @@ const waitForNostrConnect = async (poolModule, pure, clientSecretKey, clientPubk
 };
 
 const requestFromSigner = async (pool, poolModule, relays, clientSecretKey, clientPubkey, remoteSignerPubkey, request, nip44) => {
-  console.log("[Bunker] requestFromSigner:", request.method);
+  debugLog("requestFromSigner", { method: request.method });
   const { pure } = await loadNostrLibs();
 
   const requestId = crypto.randomUUID();
   const fullRequest = { id: requestId, ...request };
-  console.log("[Bunker] Request ID:", requestId.slice(0, 8) + "...");
+  debugLog("Request ID", { id: requestId.slice(0, 8) + "..." });
 
   // Encrypt request with NIP-44
   const conversationKey = nip44.v2.utils.getConversationKey(clientSecretKey, remoteSignerPubkey);
@@ -480,14 +481,14 @@ const requestFromSigner = async (pool, poolModule, relays, clientSecretKey, clie
   );
 
   // Publish to relays
-  console.log("[Bunker] Publishing request to relays...");
+  debugLog("Publishing request to relays...");
   await Promise.any(pool.publish(relays, requestEvent));
-  console.log("[Bunker] Request published, waiting for response (60s timeout)...");
+  debugLog("Request published, waiting for response", { timeout: "60s" });
 
   // Wait for response (increased to 60s for slower signers)
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      console.error("[Bunker] Request timeout for:", request.method);
+      debugLog("Request timeout", { method: request.method });
       sub.close();
       reject(new Error(`Request timeout: ${request.method}`));
     }, 60000);
@@ -496,46 +497,46 @@ const requestFromSigner = async (pool, poolModule, relays, clientSecretKey, clie
     const responsePool = new SimplePool();
 
     const responseFilter = { kinds: [24133], "#p": [clientPubkey], since: Math.floor(Date.now() / 1000) - 5 };
-    console.log("[Bunker] Subscribing for response with filter:", responseFilter);
+    debugLog("Subscribing for response", responseFilter);
 
     const sub = responsePool.subscribeMany(
       relays,
       [responseFilter],
       {
         onevent: async (event) => {
-          console.log("[Bunker] Response event from:", event.pubkey.slice(0, 12) + "...");
+          debugLog("Response event", { from: event.pubkey.slice(0, 12) + "..." });
           if (event.pubkey !== remoteSignerPubkey) {
-            console.log("[Bunker] Ignoring event from different pubkey");
+            debugLog("Ignoring event from different pubkey");
             return;
           }
 
           try {
             const decrypted = nip44.v2.decrypt(event.content, conversationKey);
             const response = JSON.parse(decrypted);
-            console.log("[Bunker] Decrypted response:", { id: response.id, hasResult: !!response.result, hasError: !!response.error });
+            debugLog("Decrypted response", { id: response.id, hasResult: !!response.result, hasError: !!response.error });
 
             if (response.id === requestId) {
-              console.log("[Bunker] Got matching response for request:", request.method);
+              debugLog("Got matching response", { method: request.method });
               clearTimeout(timeout);
               sub.close();
               responsePool.close(relays);
 
               if (response.error) {
-                console.error("[Bunker] Response error:", response.error);
+                debugLog("Response error", { error: response.error });
                 reject(new Error(response.error));
               } else {
-                console.log("[Bunker] Request successful:", request.method);
+                debugLog("Request successful", { method: request.method });
                 resolve(response.result);
               }
             } else {
-              console.log("[Bunker] Response ID mismatch, waiting for correct response");
+              debugLog("Response ID mismatch, waiting...");
             }
           } catch (err) {
-            console.log("[Bunker] Failed to decrypt/parse response (may be for different conversation)");
+            debugLog("Failed to decrypt/parse response (may be for different conversation)");
           }
         },
         oneose: () => {
-          console.log("[Bunker] End of stored events for response subscription");
+          debugLog("End of stored events for response subscription");
         },
       }
     );
