@@ -789,8 +789,11 @@ const signLoginEvent = async (method, supplemental) => {
       await signer.connect();
       debugLog("Bunker connected!");
     } catch (connectErr) {
-      debugLog("Bunker connect failed", { error: connectErr?.message, name: connectErr?.name });
-      throw connectErr;
+      // connectErr might be a string, not an Error object
+      const errMsg = typeof connectErr === "string" ? connectErr : connectErr?.message || String(connectErr);
+      const errName = connectErr?.name || "UnknownError";
+      debugLog("Bunker connect failed", { error: errMsg, name: errName, type: typeof connectErr, raw: String(connectErr) });
+      throw new Error(errMsg || "Bunker connection failed");
     }
 
     // Store the signer in memory for future use
