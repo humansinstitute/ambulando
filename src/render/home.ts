@@ -65,15 +65,15 @@ function renderHeader(session: Session | null) {
 
 function renderAuth(session: Session | null) {
   return `<section class="auth-panel" data-login-panel ${session ? "hidden" : ""}>
-    <h2>Welcome to Daily Tracker</h2>
+    <h2>Welcome to Ambulando</h2>
     <p class="auth-description">Track your daily habits, metrics, and progress. Private and encrypted.</p>
     <div class="auth-actions">
-      <button class="auth-option" type="button" data-login-method="ephemeral">Start Tracking, Anon</button>
+      <button class="auth-option" type="button" data-login-method="extension">Browser Extension</button>
+      <button class="auth-option" type="button" data-login-method="ephemeral">Start Anon</button>
     </div>
     <details class="auth-advanced">
-      <summary>Already have a Nostr identity?</summary>
-      <p class="auth-description" style="margin-top: 0.75rem; margin-bottom: 0.75rem; font-size: 0.9rem;">Connect with your browser extension or remote signer.</p>
-      <button class="auth-option" type="button" data-login-method="extension">Browser extension</button>
+      <summary>More sign-in options</summary>
+      <p class="auth-description" style="margin-top: 0.75rem; margin-bottom: 0.75rem; font-size: 0.9rem;">Connect with a remote signer or import a key.</p>
       <button class="auth-option auth-nostr-connect" type="button" data-nostr-connect-btn>Nostr Connect (Mobile Signer)</button>
       <form data-bunker-form>
         <input name="bunker" placeholder="nostrconnect://… or name@example.com" autocomplete="off" />
@@ -146,10 +146,17 @@ function renderMeasureModal() {
           <select name="type" data-measure-type>
             <option value="number">Number (e.g. 75.5 kg)</option>
             <option value="text">Text (notes)</option>
-            <option value="goodbad">Good/Bad toggle</option>
+            <option value="goodbad">Good/Bad (+/-)</option>
+            <option value="options">Multiple choice (2-5 options)</option>
+            <option value="rating">Rating (1-10)</option>
             <option value="time">Time tracker (start/stop)</option>
           </select>
         </label>
+        <div class="options-config" data-options-config hidden>
+          <label>Options (comma separated, 2-5)
+            <input type="text" name="options" data-measure-options placeholder="e.g. Positive, Negative, Flat" />
+          </label>
+        </div>
         <label class="checkbox-label">
           <input type="checkbox" name="encrypted" data-measure-encrypted checked />
           Encrypt data
