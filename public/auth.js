@@ -103,7 +103,7 @@ const wireForms = () => {
       debugLog("Bunker login complete");
       input.value = "";
     } catch (err) {
-      debugLog("Bunker login error", { error: err?.message });
+      debugLog("Bunker login error", { error: err?.message, name: err?.name, stack: err?.stack?.slice(0, 200) });
       console.error(err);
       showError(err?.message || "Unable to connect to bunker.");
     } finally {
@@ -762,8 +762,13 @@ const signLoginEvent = async (method, supplemental) => {
     const clientSecret = pure.generateSecretKey();
     signer = new nip46.BunkerSigner(clientSecret, pointer);
     debugLog("Connecting to bunker...");
-    await signer.connect();
-    debugLog("Bunker connected!");
+    try {
+      await signer.connect();
+      debugLog("Bunker connected!");
+    } catch (connectErr) {
+      debugLog("Bunker connect failed", { error: connectErr?.message, name: connectErr?.name });
+      throw connectErr;
+    }
 
     // Store the signer in memory for future use
     setMemoryBunkerSigner(signer);
