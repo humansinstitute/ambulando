@@ -173,6 +173,7 @@ function handleKeyPress(key) {
   if (currentPin.length >= PIN_LENGTH) return;
 
   currentPin += key;
+  console.log("[PIN] Key pressed", { key, currentPinLength: currentPin.length });
   updatePinDisplay();
 
   if (currentPin.length === PIN_LENGTH) {
@@ -192,8 +193,10 @@ function updatePinDisplay() {
 }
 
 async function handlePinComplete() {
+  console.log("[PIN] handlePinComplete", { isConfirmMode, currentPin, firstPin, pendingBunkerUri: !!pendingBunkerUri, pendingSecretHex: !!pendingSecretHex });
   if (isConfirmMode) {
     // We're confirming the PIN
+    console.log("[PIN] Confirm mode - comparing PINs", { match: currentPin === firstPin });
     if (currentPin === firstPin) {
       // PINs match - encrypt and store
       try {
@@ -242,6 +245,7 @@ async function handlePinComplete() {
     updatePinTitle("Confirm PIN", "Enter the same PIN again to confirm");
   } else if (pendingBunkerUri) {
     // First PIN entry for new bunker - need confirmation
+    console.log("[PIN] First PIN entered for bunker, storing and requesting confirm", { firstPin: currentPin });
     firstPin = currentPin;
     isConfirmMode = true;
     resetPinEntry();
