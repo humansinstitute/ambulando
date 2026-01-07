@@ -13,8 +13,9 @@ export const APP_TAG = "ambulando";
 export const PUBLIC_DIR = join(import.meta.dir, "../public");
 
 export const DEFAULT_RELAYS = [
-  "wss://relay.damus.io",
+  "wss://relay.nsec.app",
   "wss://nos.lol",
+  "wss://relay.damus.io",
   "wss://relay.devvul.com",
   "wss://purplepag.es",
 ];
