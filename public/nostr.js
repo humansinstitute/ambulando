@@ -44,6 +44,13 @@ export const hexToBytes = (hex) => {
 
 export const bytesToHex = (bytes) => Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 
+// Generate a random hex ID (works in non-secure contexts unlike crypto.randomUUID)
+export const generateRandomId = () => {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return bytesToHex(bytes);
+};
+
 export const decodeNsec = (nip19, input) => {
   try {
     const decoded = nip19.decode(input);

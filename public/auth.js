@@ -13,6 +13,7 @@ import {
   buildUnsignedEvent,
   bytesToHex,
   decodeNsec,
+  generateRandomId,
   hexToBytes,
   loadNostrLibs,
   loadQRCodeLib,
@@ -291,7 +292,7 @@ const openNostrConnectModal = async () => {
     const clientPubkey = pure.getPublicKey(clientSecretKey);
 
     // Generate random secret for verification
-    const secret = crypto.randomUUID().replace(/-/g, "");
+    const secret = generateRandomId();
 
     // Build nostrconnect:// URI
     const relays = getRelays();
@@ -466,7 +467,7 @@ const requestFromSigner = async (pool, poolModule, relays, clientSecretKey, clie
   debugLog("requestFromSigner", { method: request.method });
   const { pure } = await loadNostrLibs();
 
-  const requestId = crypto.randomUUID();
+  const requestId = generateRandomId();
   const fullRequest = { id: requestId, ...request };
   debugLog("Request ID", { id: requestId.slice(0, 8) + "..." });
 
