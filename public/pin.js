@@ -232,6 +232,7 @@ async function handlePinComplete() {
       }
     } else {
       // PINs don't match
+      debugLog("PINs don't match - resetting flow", { firstPinLen: firstPin.length, currentPinLen: currentPin.length }, "PIN");
       showPinError("PINs don't match. Try again.");
       isConfirmMode = false;
       firstPin = "";
@@ -324,6 +325,7 @@ function openPinModal() {
 }
 
 function closePinModal() {
+  debugLog("closePinModal called", { wasConfirmMode: isConfirmMode, hadFirstPin: firstPin.length > 0 }, "PIN");
   hide(el.pinModal);
   resetPinEntry();
   hidePinError();
