@@ -1599,6 +1599,75 @@ details summary {
   border-color: #ef4444;
 }
 
+/* Options Toggle (Multiple Choice) */
+.options-toggle {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Auto-fit columns: 1 option = 1 col, 2 = 2 cols, 3+ = 3 cols */
+.options-toggle[data-count="1"] { grid-template-columns: 1fr; }
+.options-toggle[data-count="2"] { grid-template-columns: repeat(2, 1fr); }
+.options-toggle:not([data-count="1"]):not([data-count="2"]) { grid-template-columns: repeat(3, 1fr); }
+
+.option-btn {
+  padding: 0.875rem 0.75rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 200ms ease;
+  opacity: 0.7;
+  text-align: center;
+}
+
+.option-btn:hover {
+  opacity: 1;
+  border-color: var(--accent);
+}
+
+.option-btn.selected {
+  opacity: 1;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+/* Rating Scale (1-10) */
+.rating-scale {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.rating-btn {
+  flex: 1;
+  padding: 0.625rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+  opacity: 0.6;
+}
+
+.rating-btn:hover {
+  opacity: 1;
+  border-color: var(--accent);
+}
+
+.rating-btn.filled {
+  opacity: 1;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.rating-btn.selected {
+  box-shadow: 0 0 0 2px var(--accent-dark, #8b5a2b);
+}
+
 /* Time Tracker */
 .time-tracker {
   display: flex;
@@ -1653,6 +1722,104 @@ details summary {
 
 .timer-btn.stop:hover {
   background: #dc2626;
+}
+
+.timer-display-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.timer-edit-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 200ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.timer-edit-btn:hover {
+  background: var(--surface-warm);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.timer-start-info {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: -0.25rem;
+}
+
+.timer-edit-form {
+  background: var(--surface-warm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.timer-edit-form[hidden] {
+  display: none;
+}
+
+.timer-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-warm);
+}
+
+.timer-edit-form input[type="datetime-local"] {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  background: var(--surface);
+}
+
+.timer-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.timer-edit-actions button {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.timer-edit-save {
+  background: var(--accent);
+  color: var(--surface);
+  border: none;
+}
+
+.timer-edit-save:hover {
+  background: var(--accent-light);
+}
+
+.timer-edit-cancel {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.timer-edit-cancel:hover {
+  background: var(--surface-warm);
 }
 
 /* Measures Panel */

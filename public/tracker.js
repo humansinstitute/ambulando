@@ -143,6 +143,10 @@ function renderMeasureInput(measure, value, data) {
       return renderTextInput(measure, value);
     case "goodbad":
       return renderGoodBadInput(measure, value);
+    case "options":
+      return renderOptionsInput(measure, value);
+    case "rating":
+      return renderRatingInput(measure, value);
     case "time":
       return renderTimeInput(measure, value, data);
     default:
@@ -189,16 +193,68 @@ function renderGoodBadInput(measure, value) {
   `;
 }
 
+function renderOptionsInput(measure, value) {
+  let options = [];
+  try {
+    options = measure.config ? JSON.parse(measure.config) : [];
+  } catch (_err) {
+    options = [];
+  }
+
+  if (options.length === 0) {
+    return '<p class="muted">No options configured</p>';
+  }
+
+  const buttons = options.map((opt) => {
+    const isSelected = value === opt;
+    return `<button class="option-btn ${isSelected ? "selected" : ""}"
+                    data-option="${measure.id}" data-value="${escapeHtml(opt)}">${escapeHtml(opt)}</button>`;
+  }).join("");
+
+  return `<div class="options-toggle" data-count="${options.length}">${buttons}</div>`;
+}
+
+function renderRatingInput(measure, value) {
+  const currentRating = parseInt(value, 10) || 0;
+  const buttons = [];
+
+  for (let i = 1; i <= 10; i++) {
+    const isSelected = i === currentRating;
+    const isFilled = i <= currentRating;
+    buttons.push(`<button class="rating-btn ${isSelected ? "selected" : ""} ${isFilled ? "filled" : ""}"
+                          data-rating="${measure.id}" data-value="${i}">${i}</button>`);
+  }
+
+  return `<div class="rating-scale">${buttons.join("")}</div>`;
+}
+
 function renderTimeInput(measure, value, data) {
   // Value is an object: { start?: string, end?: string, duration?: number }
   const timerData = typeof value === "object" ? value : {};
   const isRunning = timerData.start && !timerData.end;
   const elapsed = isRunning ? getElapsedSeconds(timerData.start) : (timerData.duration || 0);
 
+  // Format start time for display
+  const startTimeDisplay = timerData.start ? formatStartTime(timerData.start) : "";
+
   return `
     <div class="time-tracker" data-timer="${measure.id}">
-      <div class="timer-display ${isRunning ? "running" : ""}" data-timer-display="${measure.id}">
-        ${formatDuration(elapsed)}
+      <div class="timer-display-wrapper">
+        <div class="timer-display ${isRunning ? "running" : ""}" data-timer-display="${measure.id}">
+          ${formatDuration(elapsed)}
+        </div>
+        ${isRunning ? `<button class="timer-edit-btn" data-timer-edit="${measure.id}" title="Edit start time">⚙</button>` : ""}
+      </div>
+      ${isRunning ? `<div class="timer-start-info" data-timer-start-info="${measure.id}">Started: ${startTimeDisplay}</div>` : ""}
+      <div class="timer-edit-form" data-timer-edit-form="${measure.id}" hidden>
+        <label>
+          <span>Backdate start time:</span>
+          <input type="datetime-local" data-timer-datetime="${measure.id}" />
+        </label>
+        <div class="timer-edit-actions">
+          <button type="button" class="timer-edit-save" data-timer-save="${measure.id}">Save</button>
+          <button type="button" class="timer-edit-cancel" data-timer-cancel="${measure.id}">Cancel</button>
+        </div>
       </div>
       <div class="timer-actions">
         ${
@@ -209,6 +265,23 @@ function renderTimeInput(measure, value, data) {
       </div>
     </div>
   `;
+}
+
+function formatStartTime(isoString) {
+  const date = new Date(isoString);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  if (date.toDateString() === now.toDateString()) {
+    return `Today ${timeStr}`;
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday ${timeStr}`;
+  } else {
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " + timeStr;
+  }
 }
 
 function wireUpInputHandlers() {
@@ -293,6 +366,50 @@ function wireUpInputHandlers() {
     });
   });
 
+  // Options buttons
+  el.trackList?.querySelectorAll("[data-option]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const measureId = parseInt(btn.dataset.option, 10);
+      const value = btn.dataset.value;
+
+      // Toggle: if already selected, deselect
+      const currentData = trackingData[measureId];
+      const currentValue = currentData?.decryptedValue;
+      const newValue = currentValue === value ? null : value;
+
+      void saveTrackingValue(measureId, newValue);
+
+      // Update UI immediately
+      const container = btn.closest(".options-toggle");
+      container?.querySelectorAll(".option-btn").forEach((b) => {
+        b.classList.toggle("selected", b.dataset.value === newValue);
+      });
+    });
+  });
+
+  // Rating buttons
+  el.trackList?.querySelectorAll("[data-rating]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const measureId = parseInt(btn.dataset.rating, 10);
+      const value = parseInt(btn.dataset.value, 10);
+
+      // Toggle: if already selected, deselect
+      const currentData = trackingData[measureId];
+      const currentValue = parseInt(currentData?.decryptedValue, 10) || 0;
+      const newValue = currentValue === value ? null : value;
+
+      void saveTrackingValue(measureId, newValue);
+
+      // Update UI immediately
+      const container = btn.closest(".rating-scale");
+      container?.querySelectorAll(".rating-btn").forEach((b) => {
+        const btnValue = parseInt(b.dataset.value, 10);
+        b.classList.toggle("selected", btnValue === newValue);
+        b.classList.toggle("filled", newValue && btnValue <= newValue);
+      });
+    });
+  });
+
   // Timer start buttons
   el.trackList?.querySelectorAll("[data-timer-start]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -306,6 +423,44 @@ function wireUpInputHandlers() {
     btn.addEventListener("click", () => {
       const measureId = parseInt(btn.dataset.timerStop, 10);
       void stopTimer(measureId);
+    });
+  });
+
+  // Timer edit buttons (cog)
+  el.trackList?.querySelectorAll("[data-timer-edit]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const measureId = parseInt(btn.dataset.timerEdit, 10);
+      const form = el.trackList?.querySelector(`[data-timer-edit-form="${measureId}"]`);
+      const input = el.trackList?.querySelector(`[data-timer-datetime="${measureId}"]`);
+      const data = trackingData[measureId];
+      const startTime = data?.decryptedValue?.start;
+
+      if (form && input && startTime) {
+        // Set the datetime-local input to current start time
+        const date = new Date(startTime);
+        const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16);
+        input.value = localDateTime;
+        form.hidden = false;
+      }
+    });
+  });
+
+  // Timer edit save buttons
+  el.trackList?.querySelectorAll("[data-timer-save]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const measureId = parseInt(btn.dataset.timerSave, 10);
+      void saveBackdatedStart(measureId);
+    });
+  });
+
+  // Timer edit cancel buttons
+  el.trackList?.querySelectorAll("[data-timer-cancel]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const measureId = parseInt(btn.dataset.timerCancel, 10);
+      const form = el.trackList?.querySelector(`[data-timer-edit-form="${measureId}"]`);
+      if (form) form.hidden = true;
     });
   });
 
@@ -421,6 +576,32 @@ async function stopTimer(measureId) {
   }
 
   // Update local state and UI
+  trackingData[measureId] = {
+    ...trackingData[measureId],
+    decryptedValue: timerData,
+  };
+
+  // Re-render just this card
+  const card = el.trackList?.querySelector(`[data-measure-card="${measureId}"]`);
+  if (card) {
+    const measure = measures.find((m) => m.id === measureId);
+    if (measure) {
+      card.outerHTML = renderMeasureCard(measure);
+      wireUpInputHandlers();
+    }
+  }
+}
+
+async function saveBackdatedStart(measureId) {
+  const input = el.trackList?.querySelector(`[data-timer-datetime="${measureId}"]`);
+  if (!input?.value) return;
+
+  const newStart = new Date(input.value).toISOString();
+  const timerData = { start: newStart };
+
+  await saveTrackingValue(measureId, timerData);
+
+  // Update local state
   trackingData[measureId] = {
     ...trackingData[measureId],
     decryptedValue: timerData,
