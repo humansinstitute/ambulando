@@ -1682,6 +1682,7 @@ details summary {
   border: 2px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
+  color: var(--accent);
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 200ms ease;
