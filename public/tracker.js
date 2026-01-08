@@ -138,7 +138,7 @@ function renderMeasureCard(measure) {
     <div class="measure-card" data-measure-card="${measure.id}">
       <div class="measure-card-header">
         <span class="measure-card-name">${escapeHtml(measure.name)}</span>
-        ${measure.encrypted ? '<span class="measure-card-badge">Encrypted</span>' : ""}
+        ${measure.encrypted ? '<span class="measure-card-badge" title="Encrypted"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></span>' : ""}
       </div>
       ${renderMeasureInput(measure, value, data)}
     </div>

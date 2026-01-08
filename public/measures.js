@@ -90,7 +90,7 @@ function renderMeasuresList() {
         <div class="measure-item-type">${TYPE_LABELS[m.type] || m.type}</div>
       </div>
       <div class="measure-item-badges">
-        ${m.encrypted ? '<span class="measure-encrypted-badge">Encrypted</span>' : ""}
+        ${m.encrypted ? '<span class="measure-encrypted-badge" title="Encrypted"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></span>' : ""}
       </div>
       <button class="measure-delete-btn" data-delete-measure="${m.id}" title="Delete">&times;</button>
     </div>

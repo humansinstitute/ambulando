@@ -1561,11 +1561,9 @@ details summary {
 }
 
 .measure-card-badge {
-  font-size: 0.75rem;
   color: var(--muted);
-  padding: 0.2rem 0.5rem;
-  background: var(--surface-warm);
-  border-radius: 999px;
+  display: flex;
+  align-items: center;
 }
 
 /* Number Input */
@@ -1936,11 +1934,9 @@ details summary {
 }
 
 .timer-card-badge {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.5rem;
-  background: var(--surface-warm);
   color: var(--muted);
-  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
 }
 
 .timer-card-display {
@@ -2253,12 +2249,9 @@ details summary {
 }
 
 .measure-encrypted-badge {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #93c5fd;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
 }
 
 .measure-delete-btn {
