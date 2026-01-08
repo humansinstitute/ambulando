@@ -49,6 +49,7 @@ async function loadTimerSessions() {
   if (timeMeasures.length === 0) return;
 
   timerSessions = {};
+  runningTimers = {}; // Clear running timers before reloading
 
   try {
     // Fetch recent timer sessions for all time measures
