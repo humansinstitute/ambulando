@@ -22,6 +22,9 @@ export async function initTimers() {
   window.addEventListener("measures-changed", () => {
     void loadTimersData();
   });
+
+  // Initialize edit modal handlers
+  initEditModal();
 }
 
 async function loadTimersData() {
@@ -190,10 +193,22 @@ function renderTimerHistory() {
   }
 
   const html = allSessions.slice(0, 10).map((s) => `
-    <div class="timer-history-item">
-      <div class="timer-history-name">${escapeHtml(s.measureName)}</div>
-      <div class="timer-history-duration">${formatDuration(s.decryptedValue.duration || 0)}</div>
-      <div class="timer-history-time">${formatEndTime(s.decryptedValue.end)}</div>
+    <div class="timer-history-item" data-session-id="${s.id}">
+      <div class="timer-history-main">
+        <div class="timer-history-name">${escapeHtml(s.measureName)}</div>
+        <div class="timer-history-duration">${formatDuration(s.decryptedValue.duration || 0)}</div>
+        <div class="timer-history-time">${formatEndTime(s.decryptedValue.end)}</div>
+      </div>
+      <div class="timer-history-actions">
+        <button class="timer-history-btn edit" data-edit-session="${s.id}"
+                data-measure-id="${s.measure_id}"
+                data-start="${s.decryptedValue.start}"
+                data-end="${s.decryptedValue.end}"
+                title="Edit">Edit</button>
+        <button class="timer-history-btn delete" data-delete-session="${s.id}"
+                data-measure-id="${s.measure_id}"
+                title="Delete">Delete</button>
+      </div>
     </div>
   `).join("");
 
@@ -214,6 +229,27 @@ function wireUpTimerHandlers() {
     btn.addEventListener("click", async () => {
       const measureId = parseInt(btn.dataset.timerStop, 10);
       await stopTimer(measureId);
+    });
+  });
+
+  // Edit buttons (in history)
+  el.timersHistoryList?.querySelectorAll("[data-edit-session]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const sessionId = parseInt(btn.dataset.editSession, 10);
+      const measureId = parseInt(btn.dataset.measureId, 10);
+      const start = btn.dataset.start;
+      const end = btn.dataset.end;
+      openEditModal(sessionId, measureId, start, end);
+    });
+  });
+
+  // Delete buttons (in history)
+  el.timersHistoryList?.querySelectorAll("[data-delete-session]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const sessionId = parseInt(btn.dataset.deleteSession, 10);
+      if (confirm("Delete this timer session?")) {
+        await deleteSession(sessionId);
+      }
     });
   });
 }
@@ -381,3 +417,133 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+// ============================================================
+// Edit/Delete Timer Sessions
+// ============================================================
+
+let editingSessionId = null;
+let editingMeasureId = null;
+
+function openEditModal(sessionId, measureId, start, end) {
+  editingSessionId = sessionId;
+  editingMeasureId = measureId;
+
+  const modal = document.querySelector("[data-timer-edit-modal]");
+  const startInput = document.querySelector("[data-timer-edit-start]");
+  const endInput = document.querySelector("[data-timer-edit-end]");
+
+  if (!modal || !startInput || !endInput) return;
+
+  // Convert ISO to datetime-local format
+  startInput.value = toDatetimeLocal(start);
+  endInput.value = toDatetimeLocal(end);
+
+  modal.removeAttribute("hidden");
+}
+
+function closeEditModal() {
+  const modal = document.querySelector("[data-timer-edit-modal]");
+  if (modal) modal.setAttribute("hidden", "hidden");
+  editingSessionId = null;
+  editingMeasureId = null;
+}
+
+function toDatetimeLocal(isoString) {
+  const date = new Date(isoString);
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function fromDatetimeLocal(datetimeLocal) {
+  return new Date(datetimeLocal).toISOString();
+}
+
+async function saveSessionEdit() {
+  if (!editingSessionId || !editingMeasureId) return;
+
+  const startInput = document.querySelector("[data-timer-edit-start]");
+  const endInput = document.querySelector("[data-timer-edit-end]");
+
+  if (!startInput?.value || !endInput?.value) {
+    alert("Please enter both start and end times");
+    return;
+  }
+
+  const start = fromDatetimeLocal(startInput.value);
+  const end = fromDatetimeLocal(endInput.value);
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  if (endDate <= startDate) {
+    alert("End time must be after start time");
+    return;
+  }
+
+  const duration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
+  const timerData = { start, end, duration };
+
+  const measure = timeMeasures.find((m) => m.id === editingMeasureId);
+  if (!measure) return;
+
+  try {
+    let value = JSON.stringify(timerData);
+    if (measure.encrypted) {
+      value = await encryptEntry(value);
+    }
+
+    const response = await fetch("/tracking/timers/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: editingSessionId,
+        value,
+      }),
+    });
+
+    if (!response.ok) throw new Error("Failed to update session");
+
+    closeEditModal();
+    await loadTimerSessions();
+    renderTimersPanel();
+  } catch (err) {
+    console.error("Failed to update session:", err);
+    alert("Failed to update session");
+  }
+}
+
+async function deleteSession(sessionId) {
+  try {
+    const response = await fetch(`/tracking/${sessionId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) throw new Error("Failed to delete session");
+
+    await loadTimerSessions();
+    renderTimersPanel();
+  } catch (err) {
+    console.error("Failed to delete session:", err);
+    alert("Failed to delete session");
+  }
+}
+
+// Wire up modal events on init
+function initEditModal() {
+  const closeBtn = document.querySelector("[data-timer-edit-close]");
+  const cancelBtn = document.querySelector("[data-timer-edit-cancel]");
+  const saveBtn = document.querySelector("[data-timer-edit-save]");
+  const overlay = document.querySelector("[data-timer-edit-modal]");
+
+  closeBtn?.addEventListener("click", closeEditModal);
+  cancelBtn?.addEventListener("click", closeEditModal);
+  saveBtn?.addEventListener("click", saveSessionEdit);
+
+  // Close on overlay click
+  overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) closeEditModal();
+  });
+}
+

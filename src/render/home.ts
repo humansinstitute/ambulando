@@ -24,6 +24,7 @@ ${renderHead()}
     ${renderPinModal()}
     ${renderProfileModal()}
     ${renderMeasureModal()}
+    ${renderTimerEditModal()}
   </main>
   ${renderSessionSeed(session)}
   <script type="module" src="/app.js"></script>
@@ -194,6 +195,29 @@ function renderMeasureModal() {
           <button type="submit" data-measure-submit>Save</button>
         </div>
       </form>
+    </div>
+  </div>`;
+}
+
+function renderTimerEditModal() {
+  return `<div class="timer-edit-modal-overlay" data-timer-edit-modal hidden>
+    <div class="timer-edit-modal">
+      <button class="timer-edit-modal-close" type="button" data-timer-edit-close aria-label="Close">&times;</button>
+      <h2>Edit Timer Session</h2>
+      <div class="timer-edit-form">
+        <label>
+          Start Time
+          <input type="datetime-local" data-timer-edit-start />
+        </label>
+        <label>
+          End Time
+          <input type="datetime-local" data-timer-edit-end />
+        </label>
+        <div class="timer-edit-actions">
+          <button type="button" data-timer-edit-cancel>Cancel</button>
+          <button type="button" data-timer-edit-save>Save</button>
+        </div>
+      </div>
     </div>
   </div>`;
 }
