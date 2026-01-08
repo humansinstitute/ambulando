@@ -5,6 +5,7 @@ import { initPullRefresh } from "./pullRefresh.js";
 import { initResults } from "./results.js";
 import { onRefresh, state } from "./state.js";
 import { initTabs, showTabsIfLoggedIn } from "./tabs.js";
+import { initTimers } from "./timers.js";
 import { initTracker } from "./tracker.js";
 import { initUI } from "./ui.js";
 
@@ -30,6 +31,7 @@ const initTrackerModules = () => {
   showTabsIfLoggedIn();
   void initMeasures();
   void initTracker();
+  void initTimers();
   void initResults();
   modulesInitialized = true;
 };

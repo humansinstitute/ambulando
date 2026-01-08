@@ -11,6 +11,7 @@ import {
   updateTrackingData,
   deleteTrackingData,
   getActiveTimer,
+  getTimerSessions,
 } from "../db";
 import { jsonResponse, safeJson, unauthorized } from "../http";
 
@@ -172,4 +173,84 @@ export function handleGetActiveTimer(session: Session | null) {
   if (!session) return unauthorized();
   const timer = getActiveTimer(session.npub);
   return jsonResponse({ timer });
+}
+
+// ============================================================
+// Timer session endpoints (for Timers tab)
+// ============================================================
+
+export function handleGetTimerSessions(url: URL, session: Session | null) {
+  if (!session) return unauthorized();
+
+  const limitParam = url.searchParams.get("limit");
+  const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 20;
+
+  const sessions = getTimerSessions(session.npub, limit);
+  return jsonResponse({ sessions });
+}
+
+export async function handleStartTimer(req: Request, session: Session | null) {
+  if (!session) return unauthorized();
+
+  const body = await safeJson(req);
+  if (!body) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { measure_id, value } = body;
+
+  if (!measure_id || typeof measure_id !== "number") {
+    return jsonResponse({ error: "measure_id required" }, 400);
+  }
+
+  if (value === undefined) {
+    return jsonResponse({ error: "value required" }, 400);
+  }
+
+  // Verify measure exists and is time type
+  const measure = getMeasureById(measure_id, session.npub);
+  if (!measure) {
+    return jsonResponse({ error: "Measure not found" }, 404);
+  }
+  if (measure.type !== "time") {
+    return jsonResponse({ error: "Measure must be time type" }, 400);
+  }
+
+  // Create a new timer session record
+  const now = new Date().toISOString();
+  const data = saveTrackingData(session.npub, measure_id, now, value);
+
+  if (!data) {
+    return jsonResponse({ error: "Failed to start timer" }, 500);
+  }
+
+  return jsonResponse({ session: data });
+}
+
+export async function handleStopTimer(req: Request, session: Session | null) {
+  if (!session) return unauthorized();
+
+  const body = await safeJson(req);
+  if (!body) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { session_id, value } = body;
+
+  if (!session_id || typeof session_id !== "number") {
+    return jsonResponse({ error: "session_id required" }, 400);
+  }
+
+  if (value === undefined) {
+    return jsonResponse({ error: "value required" }, 400);
+  }
+
+  // Update the timer session with end time
+  const data = updateTrackingData(session_id, session.npub, value);
+
+  if (!data) {
+    return jsonResponse({ error: "Failed to stop timer" }, 500);
+  }
+
+  return jsonResponse({ session: data });
 }

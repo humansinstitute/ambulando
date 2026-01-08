@@ -1894,6 +1894,152 @@ details summary {
   background: var(--surface-warm);
 }
 
+/* Timers Panel */
+.timers-panel {
+  margin-top: 1rem;
+}
+
+.timers-active {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.timers-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 3rem 1rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+}
+
+.timer-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.timer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.timer-card-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.timer-card-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  background: var(--surface-warm);
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+}
+
+.timer-card-display {
+  font-size: 2.5rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--text);
+  padding: 1rem 0;
+}
+
+.timer-card-started {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.timer-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.timer-card-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.timer-card-btn.start {
+  background: #22c55e;
+  color: white;
+}
+
+.timer-card-btn.start:hover {
+  background: #16a34a;
+}
+
+.timer-card-btn.stop {
+  background: #ef4444;
+  color: white;
+}
+
+.timer-card-btn.stop:hover {
+  background: #dc2626;
+}
+
+.timers-history h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.75rem;
+}
+
+.timers-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.timers-history-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.timer-history-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.timer-history-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.timer-history-duration {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.timer-history-time {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 /* Measures Panel */
 .measures-panel {
   margin-top: 1rem;

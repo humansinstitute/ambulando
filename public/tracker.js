@@ -115,12 +115,15 @@ function renderTrackList() {
   Object.values(timerIntervals).forEach(clearInterval);
   timerIntervals = {};
 
-  if (measures.length === 0) {
-    el.trackList.innerHTML = '<p class="track-empty">No measures set up yet. Go to Measures tab to add some.</p>';
+  // Filter out time-type measures (those go to Timers tab)
+  const dailyMeasures = measures.filter((m) => m.type !== "time");
+
+  if (dailyMeasures.length === 0) {
+    el.trackList.innerHTML = '<p class="track-empty">No daily measures set up yet. Go to Measures tab to add some.</p>';
     return;
   }
 
-  const html = measures.map((m) => renderMeasureCard(m)).join("");
+  const html = dailyMeasures.map((m) => renderMeasureCard(m)).join("");
   el.trackList.innerHTML = html;
 
   // Wire up event handlers

@@ -558,6 +558,14 @@ const getActiveTimerStmt = db.query<TrackingData>(
    LIMIT 1`
 );
 
+const getTimerSessionsStmt = db.query<TrackingData>(
+  `SELECT td.* FROM tracking_data td
+   JOIN measures m ON td.measure_id = m.id
+   WHERE td.owner = ? AND m.type = 'time'
+   ORDER BY td.recorded_at DESC
+   LIMIT ?`
+);
+
 export function getTrackingData(owner: string, limit: number = 100): TrackingData[] {
   if (!owner) return [];
   return getTrackingDataStmt.all(owner, limit);
@@ -615,4 +623,9 @@ export function getActiveTimer(owner: string): TrackingData | null {
   if (!owner) return null;
   const data = getActiveTimerStmt.get(owner) as TrackingData | undefined;
   return data ?? null;
+}
+
+export function getTimerSessions(owner: string, limit: number = 20): TrackingData[] {
+  if (!owner) return [];
+  return getTimerSessionsStmt.all(owner, limit);
 }

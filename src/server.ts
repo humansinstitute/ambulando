@@ -24,6 +24,9 @@ import {
   handleSaveTracking,
   handleDeleteTracking,
   handleGetActiveTimer,
+  handleGetTimerSessions,
+  handleStartTimer,
+  handleStopTimer,
 } from "./routes/tracking";
 import { AuthService } from "./services/auth";
 import { serveStatic } from "./static";
@@ -62,6 +65,7 @@ const server = Bun.serve({
         if (pathname === "/measures") return handleGetMeasures(session);
         if (pathname === "/tracking") return handleGetTracking(url, session);
         if (pathname === "/tracking/timer") return handleGetActiveTimer(session);
+        if (pathname === "/tracking/timers/sessions") return handleGetTimerSessions(url, session);
         if (pathname === "/") return handleHome(url, session);
       }
 
@@ -73,6 +77,8 @@ const server = Bun.serve({
         if (pathname === "/entries") return handleSaveEntry(req, session);
         if (pathname === "/measures") return handleSaveMeasure(req, session);
         if (pathname === "/tracking") return handleSaveTracking(req, session);
+        if (pathname === "/tracking/timers/start") return handleStartTimer(req, session);
+        if (pathname === "/tracking/timers/stop") return handleStopTimer(req, session);
         if (pathname === "/todos") return handleTodoCreate(req, session);
 
         const updateMatch = pathname.match(/^\/todos\/(\d+)\/update$/);

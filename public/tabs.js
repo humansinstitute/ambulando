@@ -7,6 +7,7 @@ let currentTab = "track";
 
 const panels = {
   track: () => el.trackPanel,
+  timers: () => el.timersPanel,
   measures: () => el.measuresPanel,
   results: () => el.resultsPanel,
 };
@@ -61,6 +62,7 @@ export function showTabsIfLoggedIn() {
   } else {
     hide(el.tabNav);
     hide(el.trackPanel);
+    hide(el.timersPanel);
     hide(el.measuresPanel);
     hide(el.resultsPanel);
   }

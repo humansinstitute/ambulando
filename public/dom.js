@@ -48,11 +48,11 @@ export const elements = {
   nextDayBtn: document.querySelector("[data-next-day]"),
   trackList: document.querySelector("[data-track-list]"),
   trackEmpty: document.querySelector("[data-track-empty]"),
-  // Active timer banner
-  activeTimerBanner: document.querySelector("[data-active-timer-banner]"),
-  activeTimerName: document.querySelector("[data-active-timer-name]"),
-  activeTimerDuration: document.querySelector("[data-active-timer-duration]"),
-  activeTimerGoto: document.querySelector("[data-active-timer-goto]"),
+  // Timers panel elements
+  timersPanel: document.querySelector("[data-timers-panel]"),
+  timersActive: document.querySelector("[data-timers-active]"),
+  timersEmpty: document.querySelector("[data-timers-empty]"),
+  timersHistoryList: document.querySelector("[data-timers-history-list]"),
   // Measures panel elements
   measuresPanel: document.querySelector("[data-measures-panel]"),
   measuresList: document.querySelector("[data-measures-list]"),

@@ -16,6 +16,7 @@ ${renderHead()}
     ${renderAuth(session)}
     ${renderTabNav(session)}
     ${renderTrackPanel(session)}
+    ${renderTimersPanel(session)}
     ${renderMeasuresPanel(session)}
     ${renderResultsPanel(session)}
     ${renderQrModal()}
@@ -90,7 +91,8 @@ function renderAuth(session: Session | null) {
 
 function renderTabNav(session: Session | null) {
   return `<nav class="tab-nav" data-tab-nav ${session ? "" : "hidden"}>
-    <button class="tab-btn active" data-tab="track">Track</button>
+    <button class="tab-btn active" data-tab="track">Daily</button>
+    <button class="tab-btn" data-tab="timers">Timers</button>
     <button class="tab-btn" data-tab="measures">Measures</button>
     <button class="tab-btn" data-tab="results">Results</button>
   </nav>`;
@@ -98,14 +100,6 @@ function renderTabNav(session: Session | null) {
 
 function renderTrackPanel(session: Session | null) {
   return `<section class="track-panel" data-track-panel ${session ? "" : "hidden"}>
-    <div class="active-timer-banner" data-active-timer-banner hidden>
-      <div class="active-timer-banner-content">
-        <span class="active-timer-banner-icon">⏱</span>
-        <span class="active-timer-banner-name" data-active-timer-name></span>
-        <span class="active-timer-banner-duration" data-active-timer-duration></span>
-      </div>
-      <button class="active-timer-banner-goto" data-active-timer-goto>View</button>
-    </div>
     <div class="track-date-header">
       <button class="track-nav-btn" data-prev-day aria-label="Previous day">&lt;</button>
       <span class="track-date" data-track-date>Today</span>
@@ -113,6 +107,18 @@ function renderTrackPanel(session: Session | null) {
     </div>
     <div class="track-list" data-track-list>
       <p class="track-empty" data-track-empty>No measures set up yet. Go to Measures to add some.</p>
+    </div>
+  </section>`;
+}
+
+function renderTimersPanel(session: Session | null) {
+  return `<section class="timers-panel" data-timers-panel ${session ? "" : "hidden"} hidden>
+    <div class="timers-active" data-timers-active>
+      <p class="timers-empty" data-timers-empty>No time-based measures set up yet.</p>
+    </div>
+    <div class="timers-history" data-timers-history>
+      <h3>Recent Sessions</h3>
+      <div class="timers-history-list" data-timers-history-list></div>
     </div>
   </section>`;
 }
