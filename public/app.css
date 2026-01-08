@@ -1659,11 +1659,13 @@ details summary {
 .goodbad-btn.good.selected {
   background: #dcfce7;
   border-color: #22c55e;
+  color: #166534;
 }
 
 .goodbad-btn.bad.selected {
   background: #fee2e2;
   border-color: #ef4444;
+  color: #b91c1c;
 }
 
 /* Options Toggle (Multiple Choice) */
@@ -1714,6 +1716,7 @@ details summary {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
+  color: var(--accent);
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 150ms ease;
