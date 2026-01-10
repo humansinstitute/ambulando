@@ -332,15 +332,17 @@ async function stopTimer(measureId) {
 
     if (!response.ok) throw new Error("Failed to stop timer");
 
-    // Clear running timer
+    // Clear running timer immediately
     if (running.intervalId) {
       clearInterval(running.intervalId);
     }
     delete runningTimers[measureId];
 
-    // Reload and re-render
-    await loadTimerSessions();
+    // Re-render immediately to show stopped state
     renderTimersPanel();
+
+    // Then reload sessions in background for history update
+    void loadTimerSessions().then(() => renderTimersPanel());
   } catch (err) {
     console.error("Failed to stop timer:", err);
   }
