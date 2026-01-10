@@ -155,7 +155,13 @@ function renderTimerCard(measure) {
       <div class="timer-card-display" data-timer-display="${measure.id}">
         ${formatDuration(elapsed)}
       </div>
-      ${running ? `<div class="timer-card-started">Started: ${formatStartTime(running.start)}</div>` : ""}
+      ${running ? `<div class="timer-card-started">
+        Started: ${formatStartTime(running.start)}
+        <button class="timer-edit-start-btn" data-edit-running="${measure.id}"
+                data-session-id="${running.sessionId}"
+                data-start="${running.start}"
+                title="Edit start time">Edit</button>
+      </div>` : ""}
       <div class="timer-card-actions">
         ${running
           ? `<button class="timer-card-btn stop" data-timer-stop="${measure.id}">Stop</button>`
@@ -234,6 +240,16 @@ function wireUpTimerHandlers() {
     btn.addEventListener("click", async () => {
       const measureId = parseInt(btn.dataset.timerStop, 10);
       await stopTimer(measureId);
+    });
+  });
+
+  // Edit running timer buttons
+  el.timersActive?.querySelectorAll("[data-edit-running]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const measureId = parseInt(btn.dataset.editRunning, 10);
+      const sessionId = parseInt(btn.dataset.sessionId, 10);
+      const start = btn.dataset.start;
+      openEditModal(sessionId, measureId, start, null); // null end = running timer
     });
   });
 
@@ -431,20 +447,31 @@ function escapeHtml(str) {
 
 let editingSessionId = null;
 let editingMeasureId = null;
+let editingIsRunning = false;
 
 function openEditModal(sessionId, measureId, start, end) {
   editingSessionId = sessionId;
   editingMeasureId = measureId;
+  editingIsRunning = end === null;
 
   const modal = document.querySelector("[data-timer-edit-modal]");
   const startInput = document.querySelector("[data-timer-edit-start]");
   const endInput = document.querySelector("[data-timer-edit-end]");
+  const endLabel = endInput?.closest("label");
 
   if (!modal || !startInput || !endInput) return;
 
   // Convert ISO to datetime-local format
   startInput.value = toDatetimeLocal(start);
-  endInput.value = toDatetimeLocal(end);
+
+  // Show/hide end time based on whether timer is running
+  if (editingIsRunning) {
+    endInput.value = "";
+    if (endLabel) endLabel.style.display = "none";
+  } else {
+    endInput.value = toDatetimeLocal(end);
+    if (endLabel) endLabel.style.display = "";
+  }
 
   modal.removeAttribute("hidden");
 }
@@ -454,6 +481,12 @@ function closeEditModal() {
   if (modal) modal.setAttribute("hidden", "hidden");
   editingSessionId = null;
   editingMeasureId = null;
+  editingIsRunning = false;
+
+  // Reset end label visibility
+  const endInput = document.querySelector("[data-timer-edit-end]");
+  const endLabel = endInput?.closest("label");
+  if (endLabel) endLabel.style.display = "";
 }
 
 function toDatetimeLocal(isoString) {
@@ -473,24 +506,43 @@ async function saveSessionEdit() {
   const startInput = document.querySelector("[data-timer-edit-start]");
   const endInput = document.querySelector("[data-timer-edit-end]");
 
-  if (!startInput?.value || !endInput?.value) {
-    alert("Please enter both start and end times");
+  if (!startInput?.value) {
+    alert("Please enter a start time");
     return;
   }
 
   const start = fromDatetimeLocal(startInput.value);
-  const end = fromDatetimeLocal(endInput.value);
-
   const startDate = new Date(start);
-  const endDate = new Date(end);
 
-  if (endDate <= startDate) {
-    alert("End time must be after start time");
+  // Validate start time is not in the future
+  if (startDate > new Date()) {
+    alert("Start time cannot be in the future");
     return;
   }
 
-  const duration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
-  const timerData = { start, end, duration };
+  let timerData;
+
+  if (editingIsRunning) {
+    // Running timer: only update start time
+    timerData = { start };
+  } else {
+    // Completed timer: need end time too
+    if (!endInput?.value) {
+      alert("Please enter an end time");
+      return;
+    }
+
+    const end = fromDatetimeLocal(endInput.value);
+    const endDate = new Date(end);
+
+    if (endDate <= startDate) {
+      alert("End time must be after start time");
+      return;
+    }
+
+    const duration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
+    timerData = { start, end, duration };
+  }
 
   const measure = timeMeasures.find((m) => m.id === editingMeasureId);
   if (!measure) return;
@@ -511,6 +563,11 @@ async function saveSessionEdit() {
     });
 
     if (!response.ok) throw new Error("Failed to update session");
+
+    // If editing a running timer, update local state
+    if (editingIsRunning && runningTimers[editingMeasureId]) {
+      runningTimers[editingMeasureId].start = start;
+    }
 
     closeEditModal();
     await loadTimerSessions();

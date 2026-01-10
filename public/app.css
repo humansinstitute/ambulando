@@ -1955,6 +1955,22 @@ details summary {
   margin-bottom: 0.75rem;
 }
 
+.timer-edit-start-btn {
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.timer-edit-start-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
 .timer-card-actions {
   display: flex;
   gap: 0.5rem;
