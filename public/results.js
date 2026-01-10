@@ -3,6 +3,7 @@
 import { elements as el, show, hide } from "./dom.js";
 import { decryptEntry } from "./entryCrypto.js";
 import { state } from "./state.js";
+import { getCurrentTab } from "./tabs.js";
 
 let measures = [];
 let historyData = [];
@@ -39,6 +40,15 @@ export async function initResults() {
   });
 
   await loadMeasures();
+
+  // If already on results tab, load data now (event already fired before listener was set up)
+  if (getCurrentTab() === "results") {
+    if (currentView === "charts") {
+      void loadChartData();
+    } else {
+      void loadResults();
+    }
+  }
 }
 
 function handleViewToggle(e) {
@@ -71,7 +81,7 @@ async function loadMeasures() {
   if (!state.session) return;
 
   try {
-    const response = await fetch("/measures");
+    const response = await fetch("/api/measures");
     if (!response.ok) throw new Error("Failed to fetch measures");
 
     const data = await response.json();

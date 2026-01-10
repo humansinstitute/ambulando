@@ -67,7 +67,7 @@ export async function loadMeasures() {
   if (!state.session) return;
 
   try {
-    const response = await fetch("/measures");
+    const response = await fetch("/api/measures");
     if (!response.ok) throw new Error("Failed to fetch measures");
 
     const data = await response.json();
@@ -204,7 +204,7 @@ async function handleSaveMeasure(e) {
   }
 
   try {
-    const response = await fetch("/measures", {
+    const response = await fetch("/api/measures", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -236,7 +236,7 @@ async function handleDeleteMeasure(id) {
   if (!confirm("Delete this measure and all its data?")) return;
 
   try {
-    const response = await fetch(`/measures/${id}`, {
+    const response = await fetch(`/api/measures/${id}`, {
       method: "DELETE",
     });
 

@@ -63,7 +63,7 @@ const server = Bun.serve({
         if (pathname === "/ai/summary/latest") return handleLatestSummary(url);
         if (pathname === "/entries") return handleGetEntries(url, session);
         if (pathname === "/entries/recent") return handleGetRecentEntries(url, session);
-        if (pathname === "/measures") return handleGetMeasures(session);
+        if (pathname === "/api/measures") return handleGetMeasures(session);
         if (pathname === "/tracking") return handleGetTracking(url, session);
         if (pathname === "/tracking/timer") return handleGetActiveTimer(session);
         if (pathname === "/tracking/timers/sessions") return handleGetTimerSessions(url, session);
@@ -127,7 +127,7 @@ const server = Bun.serve({
         if (pathname === "/ai/summary") return handleSummaryPost(req);
         if (pathname === "/ai/tasks") return handleAiTasksPost(req);
         if (pathname === "/entries") return handleSaveEntry(req, session);
-        if (pathname === "/measures") return handleSaveMeasure(req, session);
+        if (pathname === "/api/measures") return handleSaveMeasure(req, session);
         if (pathname === "/tracking") return handleSaveTracking(req, session);
         if (pathname === "/tracking/timers/start") return handleStartTimer(req, session);
         if (pathname === "/tracking/timers/stop") return handleStopTimer(req, session);
@@ -153,7 +153,7 @@ const server = Bun.serve({
       }
 
       if (req.method === "DELETE") {
-        const measureMatch = pathname.match(/^\/measures\/(\d+)$/);
+        const measureMatch = pathname.match(/^\/api\/measures\/(\d+)$/);
         if (measureMatch) return handleDeleteMeasure(session, Number(measureMatch[1]));
 
         const trackingMatch = pathname.match(/^\/tracking\/(\d+)$/);

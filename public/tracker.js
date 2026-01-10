@@ -59,7 +59,7 @@ async function loadMeasures() {
   if (!state.session) return;
 
   try {
-    const response = await fetch("/measures");
+    const response = await fetch("/api/measures");
     if (!response.ok) throw new Error("Failed to fetch measures");
 
     const data = await response.json();

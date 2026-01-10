@@ -42,7 +42,7 @@ async function loadTimersData() {
 
 async function loadTimeMeasures() {
   try {
-    const response = await fetch("/measures");
+    const response = await fetch("/api/measures");
     if (!response.ok) throw new Error("Failed to fetch measures");
 
     const data = await response.json();
