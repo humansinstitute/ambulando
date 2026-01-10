@@ -34,6 +34,17 @@ export async function initTracker() {
     void loadMeasuresAndRender();
   });
 
+  // Listen for SSE tracking updates
+  window.addEventListener("sse:tracking", () => {
+    void loadTrackingData();
+  });
+
+  // Listen for SSE timer updates
+  window.addEventListener("sse:timers", () => {
+    void loadTrackingData();
+    void loadActiveTimer();
+  });
+
   // Initial load
   await loadMeasuresAndRender();
   await loadActiveTimer();

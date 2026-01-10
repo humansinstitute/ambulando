@@ -43,6 +43,13 @@ export async function initMeasures() {
     }
   });
 
+  // Listen for SSE updates to reload measures
+  window.addEventListener("sse:measures", () => {
+    void loadMeasures();
+    // Also notify tracker to refresh
+    window.dispatchEvent(new CustomEvent("measures-changed"));
+  });
+
   // Load measures initially
   await loadMeasures();
 }

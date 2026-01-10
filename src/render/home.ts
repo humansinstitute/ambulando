@@ -2,11 +2,14 @@ import { APP_NAME, NOSTR_RELAYS } from "../config";
 
 import type { Session } from "../types";
 
+type TabName = "daily" | "timers" | "measures" | "results";
+
 type RenderArgs = {
   session: Session | null;
+  initialTab?: TabName;
 };
 
-export function renderHomePage({ session }: RenderArgs) {
+export function renderHomePage({ session, initialTab = "daily" }: RenderArgs) {
   return `<!doctype html>
 <html lang="en">
 ${renderHead()}
@@ -26,7 +29,7 @@ ${renderHead()}
     ${renderMeasureModal()}
     ${renderTimerEditModal()}
   </main>
-  ${renderSessionSeed(session)}
+  ${renderSessionSeed(session, initialTab)}
   <script type="module" src="/app.js"></script>
 </body>
 </html>`;
@@ -326,12 +329,13 @@ function renderProfileModal() {
   </div>`;
 }
 
-function renderSessionSeed(session: Session | null) {
+function renderSessionSeed(session: Session | null, initialTab: TabName) {
   return `<script>
     window.__NOSTR_SESSION__ = ${JSON.stringify(session ?? null)};
     window.__NOSTR_RELAYS__ = ${JSON.stringify(NOSTR_RELAYS)};
     window.__APP_NAME__ = ${JSON.stringify(APP_NAME)};
     window.__APP_FAVICON__ = "/favicon.png";
+    window.__INITIAL_TAB__ = ${JSON.stringify(initialTab)};
   </script>`;
 }
 

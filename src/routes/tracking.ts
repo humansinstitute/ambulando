@@ -14,6 +14,7 @@ import {
   getTimerSessions,
 } from "../db";
 import { jsonResponse, safeJson, unauthorized } from "../http";
+import { broadcast } from "../sse";
 
 import type { MeasureType } from "../db";
 import type { Session } from "../types";
@@ -71,6 +72,13 @@ export async function handleSaveMeasure(req: Request, session: Session | null) {
     return jsonResponse({ error: "Failed to save measure" }, 500);
   }
 
+  // Broadcast update to all user's connections
+  broadcast(session.npub, {
+    type: "measures",
+    action: id ? "updated" : "created",
+    id: measure.id,
+  });
+
   return jsonResponse({ measure });
 }
 
@@ -83,6 +91,14 @@ export function handleDeleteMeasure(session: Session | null, id: number) {
   }
 
   deleteMeasure(id, session.npub);
+
+  // Broadcast deletion to all user's connections
+  broadcast(session.npub, {
+    type: "measures",
+    action: "deleted",
+    id,
+  });
+
   return jsonResponse({ success: true });
 }
 
@@ -133,6 +149,14 @@ export async function handleSaveTracking(req: Request, session: Session | null) 
     if (!data) {
       return jsonResponse({ error: "Failed to update tracking data" }, 500);
     }
+
+    // Broadcast update
+    broadcast(session.npub, {
+      type: "tracking",
+      action: "updated",
+      id: data.id,
+    });
+
     return jsonResponse({ data });
   }
 
@@ -160,12 +184,27 @@ export async function handleSaveTracking(req: Request, session: Session | null) 
     return jsonResponse({ error: "Failed to save tracking data" }, 500);
   }
 
+  // Broadcast creation
+  broadcast(session.npub, {
+    type: "tracking",
+    action: "created",
+    id: data.id,
+  });
+
   return jsonResponse({ data });
 }
 
 export function handleDeleteTracking(session: Session | null, id: number) {
   if (!session) return unauthorized();
   deleteTrackingData(id, session.npub);
+
+  // Broadcast deletion
+  broadcast(session.npub, {
+    type: "tracking",
+    action: "deleted",
+    id,
+  });
+
   return jsonResponse({ success: true });
 }
 
@@ -224,6 +263,13 @@ export async function handleStartTimer(req: Request, session: Session | null) {
     return jsonResponse({ error: "Failed to start timer" }, 500);
   }
 
+  // Broadcast timer start
+  broadcast(session.npub, {
+    type: "timers",
+    action: "created",
+    id: data.id,
+  });
+
   return jsonResponse({ session: data });
 }
 
@@ -251,6 +297,13 @@ export async function handleStopTimer(req: Request, session: Session | null) {
   if (!data) {
     return jsonResponse({ error: "Failed to stop timer" }, 500);
   }
+
+  // Broadcast timer stop
+  broadcast(session.npub, {
+    type: "timers",
+    action: "updated",
+    id: data.id,
+  });
 
   return jsonResponse({ session: data });
 }

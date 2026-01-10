@@ -3,6 +3,7 @@ import { initAvatarMenu } from "./avatar.js";
 import { initMeasures } from "./measures.js";
 import { initPullRefresh } from "./pullRefresh.js";
 import { initResults } from "./results.js";
+import { connectSSE, disconnectSSE } from "./sse.js";
 import { onRefresh, state } from "./state.js";
 import { initTabs, showTabsIfLoggedIn } from "./tabs.js";
 import { initTimers } from "./timers.js";
@@ -33,6 +34,7 @@ const initTrackerModules = () => {
   void initTracker();
   void initTimers();
   void initResults();
+  connectSSE(); // Connect to real-time updates
   modulesInitialized = true;
 };
 
@@ -42,6 +44,7 @@ onRefresh(() => {
     initTrackerModules();
   } else if (!state.session) {
     modulesInitialized = false;
+    disconnectSSE(); // Disconnect on logout
   }
 });
 

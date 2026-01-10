@@ -14,7 +14,7 @@ import { initLogs, logDebug, logError } from "./logger";
 import { handleAiTasks, handleAiTasksPost, handleLatestSummary, handleSummaryPost } from "./routes/ai";
 import { createAuthHandlers } from "./routes/auth";
 import { handleGetEntries, handleGetRecentEntries, handleSaveEntry } from "./routes/entries";
-import { handleHome } from "./routes/home";
+import { handleHome, type TabName } from "./routes/home";
 import { handleTodoCreate, handleTodoDelete, handleTodoState, handleTodoUpdate } from "./routes/todos";
 import {
   handleGetMeasures,
@@ -29,6 +29,7 @@ import {
   handleStopTimer,
 } from "./routes/tracking";
 import { AuthService } from "./services/auth";
+import { addConnection, removeConnection } from "./sse";
 import { serveStatic } from "./static";
 
 // Initialize logs (clears previous session)
@@ -66,7 +67,58 @@ const server = Bun.serve({
         if (pathname === "/tracking") return handleGetTracking(url, session);
         if (pathname === "/tracking/timer") return handleGetActiveTimer(session);
         if (pathname === "/tracking/timers/sessions") return handleGetTimerSessions(url, session);
-        if (pathname === "/") return handleHome(url, session);
+
+        // SSE endpoint for real-time updates
+        if (pathname === "/events") {
+          if (!session) {
+            return new Response("Unauthorized", { status: 401 });
+          }
+
+          const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+              // Register this connection
+              const conn = addConnection(session.npub, controller);
+
+              // Send initial connection confirmation
+              const encoder = new TextEncoder();
+              controller.enqueue(encoder.encode(": connected\n\n"));
+
+              // Keep-alive ping every 30 seconds
+              const pingInterval = setInterval(() => {
+                try {
+                  controller.enqueue(encoder.encode(": ping\n\n"));
+                } catch (_err) {
+                  clearInterval(pingInterval);
+                }
+              }, 30000);
+
+              // Cleanup on close - store interval on request for cleanup
+              req.signal.addEventListener("abort", () => {
+                clearInterval(pingInterval);
+                removeConnection(conn);
+              });
+            },
+          });
+
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              "Connection": "keep-alive",
+            },
+          });
+        }
+
+        // Tab routes - all serve the same page with different initial tab
+        const tabRoutes: Record<string, TabName> = {
+          "/": "daily",
+          "/daily": "daily",
+          "/timers": "timers",
+          "/measures": "measures",
+          "/results": "results",
+        };
+        const tabName = tabRoutes[pathname];
+        if (tabName !== undefined) return handleHome(url, session, tabName);
       }
 
       if (req.method === "POST") {

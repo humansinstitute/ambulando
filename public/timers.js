@@ -23,6 +23,11 @@ export async function initTimers() {
     void loadTimersData();
   });
 
+  // Listen for SSE timer updates
+  window.addEventListener("sse:timers", () => {
+    void loadTimersData();
+  });
+
   // Initialize edit modal handlers
   initEditModal();
 }
