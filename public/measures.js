@@ -5,6 +5,7 @@ import { state } from "./state.js";
 
 let measures = [];
 let editingMeasure = null;
+let draggedItem = null;
 
 const TYPE_LABELS = {
   number: "Number",
@@ -91,7 +92,14 @@ function renderMeasuresList() {
   const html = measures
     .map(
       (m) => `
-    <div class="measure-item" data-measure-id="${m.id}">
+    <div class="measure-item" data-measure-id="${m.id}" draggable="true">
+      <div class="measure-drag-handle" title="Drag to reorder">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="6" r="2"/><circle cx="15" cy="6" r="2"/>
+          <circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/>
+          <circle cx="9" cy="18" r="2"/><circle cx="15" cy="18" r="2"/>
+        </svg>
+      </div>
       <div class="measure-item-info">
         <div class="measure-item-name">${escapeHtml(m.name)}</div>
         <div class="measure-item-type">${TYPE_LABELS[m.type] || m.type}</div>
@@ -125,6 +133,16 @@ function renderMeasuresList() {
       const id = parseInt(btn.dataset.deleteMeasure, 10);
       await handleDeleteMeasure(id);
     });
+  });
+
+  // Wire up drag-and-drop handlers
+  el.measuresList.querySelectorAll(".measure-item").forEach((item) => {
+    item.addEventListener("dragstart", handleDragStart);
+    item.addEventListener("dragend", handleDragEnd);
+    item.addEventListener("dragover", handleDragOver);
+    item.addEventListener("drop", handleDrop);
+    item.addEventListener("dragenter", handleDragEnter);
+    item.addEventListener("dragleave", handleDragLeave);
   });
 }
 
@@ -256,6 +274,95 @@ function showError(message) {
   if (el.measureError) {
     setText(el.measureError, message);
     show(el.measureError);
+  }
+}
+
+// ============================================================
+// Drag and Drop reordering
+// ============================================================
+
+function handleDragStart(e) {
+  draggedItem = e.currentTarget;
+  draggedItem.classList.add("dragging");
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", draggedItem.dataset.measureId);
+}
+
+function handleDragEnd(e) {
+  e.currentTarget.classList.remove("dragging");
+  draggedItem = null;
+
+  // Remove any lingering drag-over classes
+  el.measuresList?.querySelectorAll(".measure-item").forEach((item) => {
+    item.classList.remove("drag-over");
+  });
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+}
+
+function handleDragEnter(e) {
+  e.preventDefault();
+  const item = e.currentTarget;
+  if (item !== draggedItem) {
+    item.classList.add("drag-over");
+  }
+}
+
+function handleDragLeave(e) {
+  e.currentTarget.classList.remove("drag-over");
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const dropTarget = e.currentTarget;
+  dropTarget.classList.remove("drag-over");
+
+  if (!draggedItem || dropTarget === draggedItem) return;
+
+  const draggedId = parseInt(draggedItem.dataset.measureId, 10);
+  const dropId = parseInt(dropTarget.dataset.measureId, 10);
+
+  // Find indices
+  const draggedIndex = measures.findIndex((m) => m.id === draggedId);
+  const dropIndex = measures.findIndex((m) => m.id === dropId);
+
+  if (draggedIndex === -1 || dropIndex === -1) return;
+
+  // Reorder the array
+  const [removed] = measures.splice(draggedIndex, 1);
+  measures.splice(dropIndex, 0, removed);
+
+  // Re-render immediately for visual feedback
+  renderMeasuresList();
+
+  // Save new order to server
+  void saveNewOrder();
+}
+
+async function saveNewOrder() {
+  const orders = measures.map((m, index) => ({
+    id: m.id,
+    sort_order: index,
+  }));
+
+  try {
+    const response = await fetch("/api/measures/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orders }),
+    });
+
+    if (!response.ok) throw new Error("Failed to save order");
+
+    // Notify other tabs/panels to refresh
+    window.dispatchEvent(new CustomEvent("measures-changed"));
+  } catch (err) {
+    console.error("Failed to save measure order:", err);
+    // Reload to get correct order from server
+    await loadMeasures();
   }
 }
 

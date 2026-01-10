@@ -502,6 +502,21 @@ export function deleteMeasure(id: number, owner: string): void {
   deleteMeasureStmt.run(id, owner);
 }
 
+const updateMeasureSortOrderStmt = db.query(
+  `UPDATE measures SET sort_order = ? WHERE id = ? AND owner = ?`
+);
+
+export function updateMeasureSortOrders(owner: string, orders: Array<{ id: number; sort_order: number }>): void {
+  if (!owner || orders.length === 0) return;
+
+  // Update each measure's sort_order in a transaction
+  db.transaction(() => {
+    for (const { id, sort_order } of orders) {
+      updateMeasureSortOrderStmt.run(sort_order, id, owner);
+    }
+  })();
+}
+
 // ============================================================
 // Tracking data prepared statements and functions
 // ============================================================

@@ -20,6 +20,7 @@ import {
   handleGetMeasures,
   handleSaveMeasure,
   handleDeleteMeasure,
+  handleReorderMeasures,
   handleGetTracking,
   handleSaveTracking,
   handleDeleteTracking,
@@ -128,6 +129,7 @@ const server = Bun.serve({
         if (pathname === "/ai/tasks") return handleAiTasksPost(req);
         if (pathname === "/entries") return handleSaveEntry(req, session);
         if (pathname === "/api/measures") return handleSaveMeasure(req, session);
+        if (pathname === "/api/measures/reorder") return handleReorderMeasures(req, session);
         if (pathname === "/tracking") return handleSaveTracking(req, session);
         if (pathname === "/tracking/timers/start") return handleStartTimer(req, session);
         if (pathname === "/tracking/timers/stop") return handleStopTimer(req, session);

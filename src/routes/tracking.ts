@@ -4,6 +4,7 @@ import {
   upsertMeasure,
   updateMeasure,
   deleteMeasure,
+  updateMeasureSortOrders,
   getTrackingData,
   getTrackingDataForDate,
   getTrackingDataByDateRange,
@@ -97,6 +98,38 @@ export function handleDeleteMeasure(session: Session | null, id: number) {
     type: "measures",
     action: "deleted",
     id,
+  });
+
+  return jsonResponse({ success: true });
+}
+
+export async function handleReorderMeasures(req: Request, session: Session | null) {
+  if (!session) return unauthorized();
+
+  const body = await safeJson(req);
+  if (!body) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { orders } = body;
+
+  if (!Array.isArray(orders)) {
+    return jsonResponse({ error: "orders must be an array" }, 400);
+  }
+
+  // Validate each order entry
+  for (const entry of orders) {
+    if (typeof entry.id !== "number" || typeof entry.sort_order !== "number") {
+      return jsonResponse({ error: "Each order entry must have numeric id and sort_order" }, 400);
+    }
+  }
+
+  updateMeasureSortOrders(session.npub, orders);
+
+  // Broadcast update to all user's connections
+  broadcast(session.npub, {
+    type: "measures",
+    action: "updated",
   });
 
   return jsonResponse({ success: true });
