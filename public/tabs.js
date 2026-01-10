@@ -100,7 +100,9 @@ export function getCurrentTab() {
 export function showTabsIfLoggedIn() {
   if (state.session) {
     show(el.tabNav);
-    show(el.trackPanel);
+    // Show the current tab's panel (already set by initTabs)
+    const panel = panels[currentTab]?.();
+    if (panel) show(panel);
   } else {
     hide(el.tabNav);
     hide(el.trackPanel);

@@ -1,7 +1,7 @@
 // Service Worker for Three Things
 // Caches external libraries and app assets
 
-const CACHE_NAME = "three-things-v7";
+const CACHE_NAME = "three-things-v8";
 
 // External libraries to cache
 const EXTERNAL_LIBS = [
@@ -18,6 +18,10 @@ const EXTERNAL_LIBS = [
 // Local assets to cache
 const LOCAL_ASSETS = [
   "/",
+  "/daily",
+  "/timers",
+  "/measures",
+  "/results",
   "/app.js",
   "/app.css",
   "/auth.js",
@@ -30,7 +34,13 @@ const LOCAL_ASSETS = [
   "/nostr.js",
   "/pin.js",
   "/pullRefresh.js",
+  "/sse.js",
   "/state.js",
+  "/tabs.js",
+  "/timers.js",
+  "/tracker.js",
+  "/measures.js",
+  "/results.js",
   "/ui.js",
   "/favicon.png",
   "/manifest.webmanifest",
