@@ -64,7 +64,7 @@ function renderHeader(session: Session | null) {
         <div class="avatar-menu-credits" data-avatar-credits ${session ? "" : "hidden"}>
           <span class="credits-label">Credits:</span>
           <span class="credits-value" data-credits-display>...</span>
-          <span class="credits-unit">days</span>
+          <span class="credits-unit">hours</span>
         </div>
         <button type="button" class="buy-credits-btn" data-buy-credits ${session ? "" : "hidden"}>Buy Credits</button>
         <div class="avatar-menu-divider"></div>
@@ -360,13 +360,13 @@ function renderCreditsModal() {
       <h2>Buy Credits</h2>
 
       <div class="credits-info" data-credits-info>
-        <p class="credits-balance">Current balance: <strong data-credits-current>0</strong> days</p>
-        <p class="credits-price">Price: <strong data-credits-price>...</strong> sats/day</p>
+        <p class="credits-balance">Current balance: <strong data-credits-current>0</strong> hours</p>
+        <p class="credits-price">Price: <strong data-credits-price>...</strong> sats/hour</p>
       </div>
 
       <div class="credits-purchase-form" data-credits-purchase-form>
         <label class="credits-quantity-label">
-          Days to purchase:
+          Hours to purchase:
           <div class="credits-quantity-controls">
             <input type="range" data-credits-quantity-slider min="1" max="21" value="5" />
             <span class="credits-quantity-value" data-credits-quantity-value>5</span>

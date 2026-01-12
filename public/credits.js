@@ -309,7 +309,7 @@ function handlePaymentSuccess(data) {
   updateCreditsDisplay();
   checkAccessState();
 
-  setText(el.creditsStatus, `Payment received! Added ${data.creditsAdded} days.`);
+  setText(el.creditsStatus, `Payment received! Added ${data.creditsAdded} hours.`);
 
   // Update pending orders and history to show the new transaction
   loadPendingOrders();
@@ -355,7 +355,7 @@ async function loadPendingOrders() {
       .map(
         (order) => `
         <div class="pending-order" data-order-id="${order.id}">
-          <span class="pending-details">${order.quantity} days - ${order.amount_sats} sats</span>
+          <span class="pending-details">${order.quantity} hours - ${order.amount_sats} sats</span>
           <span class="pending-date">${formatDate(order.created_at)}</span>
           <button type="button" class="pending-pay-btn" data-pay-order="${order.id}">Pay</button>
         </div>
@@ -455,8 +455,10 @@ function formatTxType(type) {
       return "Welcome bonus";
     case "purchase":
       return "Purchase";
+    case "hourly_deduction":
+      return "Hourly access";
     case "daily_deduction":
-      return "Daily access";
+      return "Daily access"; // Legacy
     case "manual_adjustment":
       return "Adjustment";
     default:

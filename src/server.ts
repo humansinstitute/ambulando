@@ -38,7 +38,7 @@ import {
   handleStopTimer,
 } from "./routes/tracking";
 import { AuthService } from "./services/auth";
-import { runDailyDeduction } from "./services/credits";
+import { runHourlyDeduction } from "./services/credits";
 import { addConnection, removeConnection } from "./sse";
 import { serveStatic } from "./static";
 
@@ -188,30 +188,31 @@ const server = Bun.serve({
 
 console.log(`${APP_NAME} ready on http://localhost:${server.port}`);
 
-// Daily credit deduction cron job
-// Runs at midnight UTC
-function scheduleDailyDeduction() {
+// Hourly credit deduction cron job
+// Runs at the top of each hour
+function scheduleHourlyDeduction() {
   const now = new Date();
-  const nextMidnight = new Date(Date.UTC(
+  const nextHour = new Date(Date.UTC(
     now.getUTCFullYear(),
     now.getUTCMonth(),
-    now.getUTCDate() + 1,
-    0, 0, 0, 0
+    now.getUTCDate(),
+    now.getUTCHours() + 1,
+    0, 0, 0
   ));
-  const msUntilMidnight = nextMidnight.getTime() - now.getTime();
+  const msUntilNextHour = nextHour.getTime() - now.getTime();
 
-  console.log(`Credit deduction scheduled for ${nextMidnight.toISOString()} (in ${Math.round(msUntilMidnight / 1000 / 60)} minutes)`);
+  console.log(`Credit deduction scheduled for ${nextHour.toISOString()} (in ${Math.round(msUntilNextHour / 1000 / 60)} minutes)`);
 
-  // Schedule first run at next midnight
+  // Schedule first run at next hour
   setTimeout(() => {
     runDeductionAndScheduleNext();
-  }, msUntilMidnight);
+  }, msUntilNextHour);
 }
 
 function runDeductionAndScheduleNext() {
-  console.log("Running daily credit deduction...");
+  console.log("Running hourly credit deduction...");
   try {
-    const result = runDailyDeduction();
+    const result = runHourlyDeduction();
     console.log(`Credit deduction complete: ${result.success} success, ${result.failed} failed`);
     if (result.errors.length > 0) {
       console.error("Deduction errors:", result.errors);
@@ -220,9 +221,9 @@ function runDeductionAndScheduleNext() {
     console.error("Credit deduction cron failed:", error);
   }
 
-  // Schedule next run in 24 hours
-  setTimeout(runDeductionAndScheduleNext, 24 * 60 * 60 * 1000);
+  // Schedule next run in 1 hour
+  setTimeout(runDeductionAndScheduleNext, 60 * 60 * 1000);
 }
 
 // Start the cron scheduler
-scheduleDailyDeduction();
+scheduleHourlyDeduction();

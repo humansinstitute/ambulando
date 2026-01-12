@@ -265,7 +265,7 @@ function creditUserForOrder(npub: string, order: CreditOrder): UserCredits | nul
       balanceBefore,
       balanceAfter,
       order.mginx_order_id,
-      `Purchased ${order.quantity} days for ${order.amount_sats} sats`
+      `Purchased ${order.quantity} hours for ${order.amount_sats} sats`
     );
 
     // Update order status
@@ -285,18 +285,18 @@ export function getUserTransactionHistory(npub: string, limit = 50): CreditTrans
   return getCreditTransactions(npub, limit);
 }
 
-// Daily deduction cron job
-export function runDailyDeduction(): { success: number; failed: number; errors: string[] } {
+// Hourly deduction cron job
+export function runHourlyDeduction(): { success: number; failed: number; errors: string[] } {
   const users = getAllUsersWithCredits();
   let success = 0;
   let failed = 0;
   const errors: string[] = [];
 
-  logDebug("credits-cron", `Starting daily deduction for ${users.length} users`);
+  logDebug("credits-cron", `Starting hourly deduction for ${users.length} users`);
 
   for (const user of users) {
     try {
-      const result = deductDailyCredit(user.npub);
+      const result = deductHourlyCredit(user.npub);
       if (result) {
         success++;
       } else {
@@ -307,19 +307,19 @@ export function runDailyDeduction(): { success: number; failed: number; errors: 
       failed++;
       const msg = error instanceof Error ? error.message : "Unknown error";
       errors.push(`Error deducting from ${user.npub}: ${msg}`);
-      logError("Daily deduction error", { npub: user.npub, error });
+      logError("Hourly deduction error", { npub: user.npub, error });
 
       // Log the failure in audit
       addCreditAuditLog(user.npub, "cron_failed", user.balance, JSON.stringify({ error: msg }));
     }
   }
 
-  logDebug("credits-cron", `Daily deduction complete: ${success} success, ${failed} failed`);
+  logDebug("credits-cron", `Hourly deduction complete: ${success} success, ${failed} failed`);
 
   return { success, failed, errors };
 }
 
-function deductDailyCredit(npub: string): UserCredits | null {
+function deductHourlyCredit(npub: string): UserCredits | null {
   return withCreditTransaction(() => {
     const credits = getUserCredits(npub);
     if (!credits || credits.balance <= 0) {
@@ -335,7 +335,7 @@ function deductDailyCredit(npub: string): UserCredits | null {
     }
 
     // Log transaction
-    addCreditTransaction(npub, "daily_deduction", -1, balanceBefore, balanceAfter, null, "Daily access deduction");
+    addCreditTransaction(npub, "hourly_deduction", -1, balanceBefore, balanceAfter, null, "Hourly access deduction");
 
     // Log audit
     addCreditAuditLog(npub, "cron_deduction", balanceAfter, JSON.stringify({ deducted: 1 }));
