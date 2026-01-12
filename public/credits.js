@@ -142,11 +142,15 @@ async function openCreditsModal() {
     console.error("Failed to fetch credits:", err);
   }
 
-  // Load pending orders
-  await loadPendingOrders();
+  // Load pending orders and history in parallel
+  await Promise.all([loadPendingOrders(), loadHistory()]);
 
-  // Reset to purchase form
-  resetInvoiceForm();
+  // Show history section by default
+  show(el.creditsHistory);
+  setText(el.creditsHistoryToggle, "Hide History");
+
+  // Reset to purchase form (but keep history visible)
+  resetInvoiceForm(false);
 
   show(el.creditsModal);
   document.addEventListener("keydown", handleCreditsEscape);
@@ -236,13 +240,16 @@ async function showInvoice(bolt11) {
   }
 }
 
-function resetInvoiceForm() {
+function resetInvoiceForm(hideHistory = true) {
   currentOrder = null;
   stopPolling();
 
   show(el.creditsPurchaseForm);
   hide(el.creditsInvoice);
-  hide(el.creditsHistory);
+  if (hideHistory) {
+    hide(el.creditsHistory);
+    setText(el.creditsHistoryToggle, "Show History");
+  }
 
   setText(el.creditsStatus, "");
   if (el.creditsQr) el.creditsQr.innerHTML = "";
