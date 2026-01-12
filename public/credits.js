@@ -45,6 +45,7 @@ function wireCreditsUI() {
 
   // No credits overlay button
   el.noCreditsBtn?.addEventListener("click", () => {
+    hide(el.noCreditsOverlay); // Hide overlay first
     openCreditsModal();
   });
 
@@ -170,6 +171,7 @@ function closeCreditsModal() {
   hide(el.creditsModal);
   document.removeEventListener("keydown", handleCreditsEscape);
   stopPolling();
+  checkAccessState(); // Restore no-credits overlay if still no credits
 }
 
 function handleCreditsEscape(e) {
