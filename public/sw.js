@@ -1,7 +1,7 @@
 // Service Worker for Three Things
 // Caches external libraries and app assets
 
-const CACHE_NAME = "three-things-v13";
+const CACHE_NAME = "three-things-v14";
 
 // External libraries to cache
 const EXTERNAL_LIBS = [

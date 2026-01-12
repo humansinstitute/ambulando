@@ -186,6 +186,7 @@ function openAddModal() {
   setText(el.measureModalTitle, "Add Measure");
   el.measureForm?.reset();
   if (el.measureId) el.measureId.value = "";
+  if (el.measureType) el.measureType.disabled = false; // Enable type selection for new measures
   if (el.measureEncrypted) el.measureEncrypted.checked = true;
   if (el.measureOptions) el.measureOptions.value = "";
   hide(el.measureOptionsConfig);
@@ -199,7 +200,10 @@ function openEditModal(measure) {
   setText(el.measureModalTitle, "Edit Measure");
   if (el.measureId) el.measureId.value = measure.id;
   if (el.measureName) el.measureName.value = measure.name;
-  if (el.measureType) el.measureType.value = measure.type;
+  if (el.measureType) {
+    el.measureType.value = measure.type;
+    el.measureType.disabled = true; // Can't change type on existing measure
+  }
   if (el.measureEncrypted) el.measureEncrypted.checked = !!measure.encrypted;
 
   // Handle options config
