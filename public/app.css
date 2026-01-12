@@ -2967,6 +2967,33 @@ details summary {
   margin-bottom: 0.75rem;
 }
 
+.credits-quick-select {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.credits-quick-btn {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-radius: 6px;
+  color: var(--text-warm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.credits-quick-btn:hover {
+  background: var(--border-warm);
+  color: var(--text-bright);
+}
+
+.credits-quick-btn:active {
+  transform: scale(0.97);
+}
+
 .credits-quantity-controls {
   display: flex;
   align-items: center;

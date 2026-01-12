@@ -57,6 +57,17 @@ function wireCreditsUI() {
   // Quantity slider
   el.creditsQuantitySlider?.addEventListener("input", updateQuantityDisplay);
 
+  // Quick select buttons
+  document.querySelectorAll("[data-credits-quick]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const hours = Number(btn.getAttribute("data-credits-quick"));
+      if (el.creditsQuantitySlider && hours > 0) {
+        el.creditsQuantitySlider.value = String(hours);
+        updateQuantityDisplay();
+      }
+    });
+  });
+
   // Generate invoice button
   el.creditsGenerateBtn?.addEventListener("click", generateInvoice);
 
@@ -92,10 +103,10 @@ export function updateCreditsDisplay() {
     setText(el.creditsPrice, String(creditsState.pricePerCredit));
   }
 
-  // Update slider max to maxCredits (server validates total balance)
+  // Update slider max to maxCredits (server sends hours)
   if (el.creditsQuantitySlider) {
     el.creditsQuantitySlider.max = String(creditsState.maxCredits);
-    el.creditsQuantitySlider.value = String(Math.min(5, creditsState.maxCredits));
+    el.creditsQuantitySlider.value = String(Math.min(24, creditsState.maxCredits)); // Default to 1 day
   }
 
   updateQuantityDisplay();

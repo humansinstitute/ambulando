@@ -72,13 +72,14 @@ async function getProductPrice(): Promise<number | null> {
 export async function getCreditsStatus(npub: string): Promise<CreditsStatus> {
   const credits = getUserCredits(npub);
   const price = await getProductPrice();
+  const maxHours = MAX_CREDITS * 24; // Convert days to hours
 
   if (!credits) {
     // User hasn't logged in yet (no credit record)
     return {
       balance: 0,
-      maxCredits: MAX_CREDITS,
-      canPurchase: MAX_CREDITS, // Max per purchase, no total cap
+      maxCredits: maxHours,
+      canPurchase: maxHours, // Max per purchase, no total cap
       hasAccess: false,
       pricePerCredit: price,
       isFirstLogin: true,
@@ -87,8 +88,8 @@ export async function getCreditsStatus(npub: string): Promise<CreditsStatus> {
 
   return {
     balance: credits.balance,
-    maxCredits: MAX_CREDITS,
-    canPurchase: MAX_CREDITS, // Max per purchase, no total cap
+    maxCredits: maxHours,
+    canPurchase: maxHours, // Max per purchase, no total cap
     hasAccess: credits.balance > 0,
     pricePerCredit: price,
     isFirstLogin: false,
@@ -127,6 +128,7 @@ export function initializeUserCredits(npub: string): UserCredits | null {
 
 export async function purchaseCredits(npub: string, quantity: number): Promise<PurchaseResult> {
   logDebug("credits", `purchaseCredits called`, { npub, quantity });
+  const maxHours = MAX_CREDITS * 24; // Convert days to hours
 
   // Validate quantity (max per purchase, not total balance)
   if (quantity < 1) {
@@ -134,11 +136,11 @@ export async function purchaseCredits(npub: string, quantity: number): Promise<P
     return { ok: false, error: "Quantity must be at least 1" };
   }
 
-  if (quantity > MAX_CREDITS) {
-    logDebug("credits", "Quantity exceeds max per purchase", { quantity, maxCredits: MAX_CREDITS });
+  if (quantity > maxHours) {
+    logDebug("credits", "Quantity exceeds max per purchase", { quantity, maxHours });
     return {
       ok: false,
-      error: `Cannot purchase more than ${MAX_CREDITS} credits at a time`,
+      error: `Cannot purchase more than ${maxHours} hours (${MAX_CREDITS} days) at a time`,
     };
   }
 

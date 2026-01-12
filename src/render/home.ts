@@ -367,9 +367,14 @@ function renderCreditsModal() {
       <div class="credits-purchase-form" data-credits-purchase-form>
         <label class="credits-quantity-label">
           Hours to purchase:
+          <div class="credits-quick-select">
+            <button type="button" class="credits-quick-btn" data-credits-quick="24">1 day</button>
+            <button type="button" class="credits-quick-btn" data-credits-quick="168">7 days</button>
+            <button type="button" class="credits-quick-btn" data-credits-quick="504">21 days</button>
+          </div>
           <div class="credits-quantity-controls">
-            <input type="range" data-credits-quantity-slider min="1" max="21" value="5" />
-            <span class="credits-quantity-value" data-credits-quantity-value>5</span>
+            <input type="range" data-credits-quantity-slider min="1" max="504" value="24" />
+            <span class="credits-quantity-value" data-credits-quantity-value>24</span>
           </div>
         </label>
         <p class="credits-total">Total: <strong data-credits-total>...</strong> sats</p>
