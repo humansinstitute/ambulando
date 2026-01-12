@@ -285,20 +285,38 @@ export function getUserTransactionHistory(npub: string, limit = 50): CreditTrans
   return getCreditTransactions(npub, limit);
 }
 
+// Track last deduction hour to prevent duplicates from multiple scheduled jobs
+let lastDeductionHour: string | null = null;
+
 // Hourly deduction cron job
-export function runHourlyDeduction(): { success: number; failed: number; errors: string[] } {
+export function runHourlyDeduction(): { success: number; failed: number; skipped: number; errors: string[] } {
+  const currentHour = new Date().toISOString().slice(0, 13); // "2026-01-12T09"
+
+  // Prevent duplicate runs in the same hour
+  if (lastDeductionHour === currentHour) {
+    console.log(`[credits-cron] Skipping duplicate deduction for hour ${currentHour}`);
+    return { success: 0, failed: 0, skipped: 0, errors: [] };
+  }
+  lastDeductionHour = currentHour;
+
   const users = getAllUsersWithCredits();
   let success = 0;
   let failed = 0;
+  let skipped = 0;
   const errors: string[] = [];
 
+  console.log(`[credits-cron] Starting hourly deduction for ${users.length} users at ${currentHour}`);
   logDebug("credits-cron", `Starting hourly deduction for ${users.length} users`);
 
   for (const user of users) {
     try {
       const result = deductHourlyCredit(user.npub);
       if (result) {
+        console.log(`[credits-cron] Deducted 1 credit from ${user.npub.slice(0, 20)}... (${result.balance + 1} -> ${result.balance})`);
         success++;
+      } else if (user.balance <= 0) {
+        console.log(`[credits-cron] Skipped ${user.npub.slice(0, 20)}... (balance: ${user.balance})`);
+        skipped++;
       } else {
         failed++;
         errors.push(`Failed to deduct from ${user.npub}`);
@@ -307,6 +325,7 @@ export function runHourlyDeduction(): { success: number; failed: number; errors:
       failed++;
       const msg = error instanceof Error ? error.message : "Unknown error";
       errors.push(`Error deducting from ${user.npub}: ${msg}`);
+      console.error(`[credits-cron] Error deducting from ${user.npub.slice(0, 20)}...: ${msg}`);
       logError("Hourly deduction error", { npub: user.npub, error });
 
       // Log the failure in audit
@@ -314,9 +333,10 @@ export function runHourlyDeduction(): { success: number; failed: number; errors:
     }
   }
 
-  logDebug("credits-cron", `Hourly deduction complete: ${success} success, ${failed} failed`);
+  console.log(`[credits-cron] Deduction complete: ${success} success, ${skipped} skipped, ${failed} failed`);
+  logDebug("credits-cron", `Hourly deduction complete: ${success} success, ${skipped} skipped, ${failed} failed`);
 
-  return { success, failed, errors };
+  return { success, failed, skipped, errors };
 }
 
 function deductHourlyCredit(npub: string): UserCredits | null {
