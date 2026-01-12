@@ -312,13 +312,15 @@ function handlePaymentSuccess(data) {
 
   setText(el.creditsStatus, `Payment received! Added ${data.creditsAdded} days.`);
 
-  // Update pending orders
+  // Update pending orders and history to show the new transaction
   loadPendingOrders();
+  loadHistory();
 
-  // Hide invoice section after a delay
+  // Reset to purchase form after a delay, but keep history visible
   setTimeout(() => {
     if (el.creditsModal && !el.creditsModal.hasAttribute("hidden")) {
-      resetInvoiceForm();
+      resetInvoiceForm(false); // Keep history visible
+      show(el.creditsHistory);
     }
   }, 3000);
 }
