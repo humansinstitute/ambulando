@@ -6,6 +6,7 @@ import { state } from "./state.js";
 let measures = [];
 let editingMeasure = null;
 let draggedItem = null;
+let openMenuId = null; // Track which measure's menu is open
 
 const TYPE_LABELS = {
   number: "Number",
@@ -36,6 +37,12 @@ export async function initMeasures() {
   el.measureModal?.addEventListener("click", (e) => {
     if (e.target === el.measureModal) closeModal();
   });
+
+  // Prevent unchecking the encryption checkbox
+  el.measureEncrypted?.addEventListener("change", handleEncryptedChange);
+
+  // Close any open menus when clicking elsewhere
+  document.addEventListener("click", handleDocumentClick);
 
   // Listen for tab switches to reload measures
   window.addEventListener("tab-switched", (e) => {
@@ -107,7 +114,25 @@ function renderMeasuresList() {
       <div class="measure-item-badges">
         ${m.encrypted ? '<span class="measure-encrypted-badge" title="Encrypted"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></span>' : ""}
       </div>
-      <button class="measure-delete-btn" data-delete-measure="${m.id}" title="Delete">&times;</button>
+      <div class="measure-menu-container">
+        <button class="measure-menu-btn" data-menu-measure="${m.id}" title="More options">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="12" cy="19" r="2"/>
+          </svg>
+        </button>
+        <div class="measure-dropdown" data-dropdown="${m.id}" hidden>
+          <button class="measure-dropdown-item" data-edit-measure="${m.id}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            Edit
+          </button>
+          <button class="measure-dropdown-item measure-dropdown-delete" data-delete-measure="${m.id}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            Delete
+          </button>
+        </div>
+      </div>
     </div>
   `
     )
@@ -115,22 +140,32 @@ function renderMeasuresList() {
 
   el.measuresList.innerHTML = html;
 
-  // Wire up edit handlers (click on item)
-  el.measuresList.querySelectorAll(".measure-item").forEach((item) => {
-    item.addEventListener("click", (e) => {
-      // Don't trigger edit when clicking delete button
-      if (e.target.closest("[data-delete-measure]")) return;
-      const id = parseInt(item.dataset.measureId, 10);
+  // Wire up 3-dot menu buttons
+  el.measuresList.querySelectorAll("[data-menu-measure]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.menuMeasure, 10);
+      toggleMenu(id);
+    });
+  });
+
+  // Wire up edit handlers (via dropdown)
+  el.measuresList.querySelectorAll("[data-edit-measure]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.editMeasure, 10);
       const measure = measures.find((m) => m.id === id);
+      closeAllMenus();
       if (measure) openEditModal(measure);
     });
   });
 
-  // Wire up delete handlers
+  // Wire up delete handlers (via dropdown)
   el.measuresList.querySelectorAll("[data-delete-measure]").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       const id = parseInt(btn.dataset.deleteMeasure, 10);
+      closeAllMenus();
       await handleDeleteMeasure(id);
     });
   });
@@ -274,6 +309,53 @@ function showError(message) {
   if (el.measureError) {
     setText(el.measureError, message);
     show(el.measureError);
+  }
+}
+
+// ============================================================
+// 3-dot menu handling
+// ============================================================
+
+function toggleMenu(measureId) {
+  const dropdown = document.querySelector(`[data-dropdown="${measureId}"]`);
+  if (!dropdown) return;
+
+  // Close other menus first
+  if (openMenuId !== measureId) {
+    closeAllMenus();
+  }
+
+  if (dropdown.hasAttribute("hidden")) {
+    dropdown.removeAttribute("hidden");
+    openMenuId = measureId;
+  } else {
+    dropdown.setAttribute("hidden", "");
+    openMenuId = null;
+  }
+}
+
+function closeAllMenus() {
+  document.querySelectorAll(".measure-dropdown").forEach((d) => {
+    d.setAttribute("hidden", "");
+  });
+  openMenuId = null;
+}
+
+function handleDocumentClick(e) {
+  // Close menus when clicking outside
+  if (!e.target.closest(".measure-menu-container")) {
+    closeAllMenus();
+  }
+}
+
+// ============================================================
+// Encryption checkbox handling
+// ============================================================
+
+function handleEncryptedChange(e) {
+  if (!e.target.checked) {
+    e.target.checked = true;
+    alert("Don't be silly, encryption rules. I don't want to see what you're tracking!");
   }
 }
 

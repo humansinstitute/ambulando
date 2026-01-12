@@ -2300,19 +2300,74 @@ details summary {
   align-items: center;
 }
 
-.measure-delete-btn {
-  padding: 0.4rem 0.6rem;
+.measure-menu-container {
+  position: relative;
+}
+
+.measure-menu-btn {
+  padding: 0.4rem;
   background: transparent;
   color: var(--muted);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 200ms ease;
 }
 
-.measure-delete-btn:hover {
+.measure-menu-btn:hover {
+  background: var(--surface-warm);
+  color: var(--text);
+}
+
+.measure-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.measure-dropdown[hidden] {
+  display: none;
+}
+
+.measure-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.measure-dropdown-item:hover {
+  background: var(--surface-warm);
+}
+
+.measure-dropdown-item svg {
+  color: var(--muted);
+}
+
+.measure-dropdown-delete:hover {
   background: #fee2e2;
+  color: #ef4444;
+}
+
+.measure-dropdown-delete:hover svg {
   color: #ef4444;
 }
 
