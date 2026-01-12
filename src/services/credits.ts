@@ -174,14 +174,14 @@ export async function purchaseCredits(npub: string, quantity: number): Promise<P
   }
 
   const mginxOrder = orderResult.order;
-  logDebug("credits", "Mginx order created", { orderId: mginxOrder.id, totalSats: mginxOrder.totalSats });
+  logDebug("credits", "Mginx order created", { orderId: mginxOrder.id, amount: mginxOrder.amount });
 
   // Store order locally
   const localOrder = createCreditOrder(
     npub,
     mginxOrder.id,
     quantity,
-    mginxOrder.totalSats,
+    mginxOrder.amount,
     mginxOrder.bolt11
   );
 

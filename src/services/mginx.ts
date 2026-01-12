@@ -13,18 +13,22 @@ export type MginxProductResponse = {
   product: MginxProduct;
 };
 
-export type MginxOrder = {
-  id: string;
-  productId: string;
-  quantity: number;
-  totalSats: number; // total sats
-  bolt11: string;
+// Raw API response for order creation (not wrapped)
+export type MginxOrderResponse = {
+  order_id: string;
+  invoice: string;
+  amount_sats: number;
   status: "pending" | "paid" | "expired";
-  createdAt: string;
+  expires_at: number;
+  product_name: string;
 };
 
-export type MginxOrderResponse = {
-  order: MginxOrder;
+// Normalized order type used internally
+export type MginxOrder = {
+  id: string;
+  amount: number;
+  bolt11: string;
+  status: "pending" | "paid" | "expired";
 };
 
 export type MginxOrderStatus = {
@@ -120,7 +124,15 @@ class MginxClient {
     });
 
     if (!result.ok) return result;
-    return { ok: true, order: result.data.order };
+
+    // Normalize the response to our internal format
+    const order: MginxOrder = {
+      id: result.data.order_id,
+      amount: result.data.amount_sats,
+      bolt11: result.data.invoice,
+      status: result.data.status,
+    };
+    return { ok: true, order };
   }
 
   async getOrderStatus(
