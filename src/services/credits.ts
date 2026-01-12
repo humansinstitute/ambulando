@@ -78,7 +78,7 @@ export async function getCreditsStatus(npub: string): Promise<CreditsStatus> {
     return {
       balance: 0,
       maxCredits: MAX_CREDITS,
-      canPurchase: MAX_CREDITS - INITIAL_CREDITS,
+      canPurchase: MAX_CREDITS, // Max per purchase, no total cap
       hasAccess: false,
       pricePerCredit: price,
       isFirstLogin: true,
@@ -88,7 +88,7 @@ export async function getCreditsStatus(npub: string): Promise<CreditsStatus> {
   return {
     balance: credits.balance,
     maxCredits: MAX_CREDITS,
-    canPurchase: Math.max(0, MAX_CREDITS - credits.balance),
+    canPurchase: MAX_CREDITS, // Max per purchase, no total cap
     hasAccess: credits.balance > 0,
     pricePerCredit: price,
     isFirstLogin: false,
@@ -128,23 +128,17 @@ export function initializeUserCredits(npub: string): UserCredits | null {
 export async function purchaseCredits(npub: string, quantity: number): Promise<PurchaseResult> {
   logDebug("credits", `purchaseCredits called`, { npub, quantity });
 
-  // Validate quantity
+  // Validate quantity (max per purchase, not total balance)
   if (quantity < 1) {
     logDebug("credits", "Quantity validation failed: less than 1");
     return { ok: false, error: "Quantity must be at least 1" };
   }
 
-  // Check current balance
-  const credits = getUserCredits(npub);
-  const currentBalance = credits?.balance ?? 0;
-  const canPurchase = MAX_CREDITS - currentBalance;
-  logDebug("credits", "Balance check", { currentBalance, canPurchase, quantity });
-
-  if (quantity > canPurchase) {
-    logDebug("credits", "Quantity exceeds purchasable amount");
+  if (quantity > MAX_CREDITS) {
+    logDebug("credits", "Quantity exceeds max per purchase", { quantity, maxCredits: MAX_CREDITS });
     return {
       ok: false,
-      error: `Cannot purchase ${quantity} credits. Maximum additional credits: ${canPurchase}`,
+      error: `Cannot purchase more than ${MAX_CREDITS} credits at a time`,
     };
   }
 
@@ -249,7 +243,7 @@ function creditUserForOrder(npub: string, order: CreditOrder): UserCredits | nul
   return withCreditTransaction(() => {
     let credits = getUserCredits(npub);
     const balanceBefore = credits?.balance ?? 0;
-    const balanceAfter = Math.min(balanceBefore + order.quantity, MAX_CREDITS);
+    const balanceAfter = balanceBefore + order.quantity;
 
     if (!credits) {
       // Create user if doesn't exist (shouldn't happen normally)
