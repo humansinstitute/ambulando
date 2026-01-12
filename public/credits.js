@@ -92,11 +92,10 @@ export function updateCreditsDisplay() {
     setText(el.creditsPrice, String(creditsState.pricePerCredit));
   }
 
-  // Update slider max based on canPurchase
+  // Update slider max to maxCredits (server validates total balance)
   if (el.creditsQuantitySlider) {
-    const maxPurchase = Math.min(creditsState.canPurchase, creditsState.maxCredits);
-    el.creditsQuantitySlider.max = String(Math.max(1, maxPurchase));
-    el.creditsQuantitySlider.value = String(Math.min(5, maxPurchase));
+    el.creditsQuantitySlider.max = String(creditsState.maxCredits);
+    el.creditsQuantitySlider.value = String(Math.min(5, creditsState.maxCredits));
   }
 
   updateQuantityDisplay();
@@ -169,7 +168,7 @@ function handleCreditsEscape(e) {
 async function generateInvoice() {
   const quantity = Number(el.creditsQuantitySlider?.value ?? 1);
 
-  if (quantity < 1 || quantity > creditsState.canPurchase) {
+  if (quantity < 1 || quantity > creditsState.maxCredits) {
     setText(el.creditsStatus, "Invalid quantity");
     return;
   }
