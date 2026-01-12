@@ -23,9 +23,9 @@ export const NOSTR_RELAYS: string[] = Bun.env.NOSTR_RELAYS
   ? Bun.env.NOSTR_RELAYS.split(",").map((s) => s.trim()).filter(Boolean)
   : DEFAULT_RELAYS;
 
-// Credits configuration (hourly)
-export const MAX_CREDITS = Number(Bun.env.MAX_CREDITS ?? 21); // Max credits per purchase
-export const INITIAL_CREDITS = Number(Bun.env.INITIAL_CREDITS ?? 72); // 72 hours = 3 days
+// Credits configuration (1 credit = 1 hour)
+export const MAX_CREDITS = Number(Bun.env.MAX_CREDITS ?? 504); // Max hours per purchase (default 21 days)
+export const INITIAL_CREDITS = Number(Bun.env.INITIAL_CREDITS ?? 72); // Initial hours (default 3 days)
 export const MGINX_URL = Bun.env.MGINX_URL ?? "http://localhost:8787";
 export const MGINX_API_KEY = Bun.env.APIKEY_MGINX ?? "";
 export const MGINX_CREDITS_PRODUCT_ID = Bun.env.CREDITS_ID ?? "";
