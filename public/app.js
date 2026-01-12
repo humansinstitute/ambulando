@@ -1,5 +1,6 @@
 import { initAuth } from "./auth.js";
 import { initAvatarMenu } from "./avatar.js";
+import { initCredits, clearCredits } from "./credits.js";
 import { initMeasures } from "./measures.js";
 import { initPullRefresh } from "./pullRefresh.js";
 import { initResults } from "./results.js";
@@ -30,6 +31,7 @@ const initTrackerModules = () => {
 
   initTabs();
   showTabsIfLoggedIn();
+  void initCredits(); // Initialize credits system first
   void initMeasures();
   void initTracker();
   void initTimers();
@@ -45,6 +47,7 @@ onRefresh(() => {
   } else if (!state.session) {
     modulesInitialized = false;
     disconnectSSE(); // Disconnect on logout
+    clearCredits(); // Clear credits state on logout
   }
 });
 

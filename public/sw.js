@@ -1,7 +1,7 @@
 // Service Worker for Three Things
 // Caches external libraries and app assets
 
-const CACHE_NAME = "three-things-v9";
+const CACHE_NAME = "three-things-v10";
 
 // External libraries to cache
 const EXTERNAL_LIBS = [
@@ -27,6 +27,7 @@ const LOCAL_ASSETS = [
   "/auth.js",
   "/avatar.js",
   "/constants.js",
+  "/credits.js",
   "/crypto.js",
   "/dom.js",
   "/entries.js",
@@ -111,8 +112,8 @@ function isImageRequest(url) {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // For API calls (entries, auth), always use network
-  if (url.pathname.startsWith("/entries") || url.pathname.startsWith("/auth")) {
+  // For API calls (entries, auth, credits), always use network
+  if (url.pathname.startsWith("/entries") || url.pathname.startsWith("/auth") || url.pathname.startsWith("/api/credits")) {
     return;
   }
 

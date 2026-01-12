@@ -81,6 +81,36 @@ export const elements = {
   resultsLoadMore: document.querySelector("[data-results-load-more]"),
   loadMoreResultsBtn: document.querySelector("[data-load-more-results]"),
   chartsList: document.querySelector("[data-charts-list]"),
+  // Credits elements
+  avatarCredits: document.querySelector("[data-avatar-credits]"),
+  creditsDisplay: document.querySelector("[data-credits-display]"),
+  buyCreditsBtn: document.querySelector("[data-buy-credits]"),
+  // Credits modal elements
+  creditsModal: document.querySelector("[data-credits-modal]"),
+  creditsClose: document.querySelector("[data-credits-close]"),
+  creditsInfo: document.querySelector("[data-credits-info]"),
+  creditsCurrent: document.querySelector("[data-credits-current]"),
+  creditsPrice: document.querySelector("[data-credits-price]"),
+  creditsPurchaseForm: document.querySelector("[data-credits-purchase-form]"),
+  creditsQuantitySlider: document.querySelector("[data-credits-quantity-slider]"),
+  creditsQuantityValue: document.querySelector("[data-credits-quantity-value]"),
+  creditsTotal: document.querySelector("[data-credits-total]"),
+  creditsGenerateBtn: document.querySelector("[data-credits-generate]"),
+  creditsInvoice: document.querySelector("[data-credits-invoice]"),
+  creditsQr: document.querySelector("[data-credits-qr]"),
+  creditsBolt11: document.querySelector("[data-credits-bolt11]"),
+  creditsCopyBtn: document.querySelector("[data-credits-copy]"),
+  creditsStatus: document.querySelector("[data-credits-status]"),
+  creditsCheckBtn: document.querySelector("[data-credits-check]"),
+  creditsNewBtn: document.querySelector("[data-credits-new]"),
+  creditsPending: document.querySelector("[data-credits-pending]"),
+  creditsPendingList: document.querySelector("[data-credits-pending-list]"),
+  creditsHistory: document.querySelector("[data-credits-history]"),
+  creditsHistoryList: document.querySelector("[data-credits-history-list]"),
+  creditsHistoryToggle: document.querySelector("[data-credits-history-toggle]"),
+  // No credits overlay
+  noCreditsOverlay: document.querySelector("[data-no-credits-overlay]"),
+  noCreditsBtn: document.querySelector("[data-no-credits-buy]"),
 };
 
 export const show = (el) => el?.removeAttribute("hidden");

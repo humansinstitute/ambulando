@@ -28,6 +28,8 @@ ${renderHead()}
     ${renderProfileModal()}
     ${renderMeasureModal()}
     ${renderTimerEditModal()}
+    ${renderCreditsModal()}
+    ${renderNoCreditsOverlay()}
   </main>
   ${renderSessionSeed(session, initialTab)}
   <script type="module" src="/app.js"></script>
@@ -59,6 +61,13 @@ function renderHeader(session: Session | null) {
       </button>
       <div class="avatar-menu" data-avatar-menu hidden>
         <button type="button" data-view-profile ${session ? "" : "hidden"}>View Profile</button>
+        <div class="avatar-menu-credits" data-avatar-credits ${session ? "" : "hidden"}>
+          <span class="credits-label">Credits:</span>
+          <span class="credits-value" data-credits-display>...</span>
+          <span class="credits-unit">days</span>
+        </div>
+        <button type="button" class="buy-credits-btn" data-buy-credits ${session ? "" : "hidden"}>Buy Credits</button>
+        <div class="avatar-menu-divider"></div>
         <button type="button" data-export-secret ${session?.method === "ephemeral" ? "" : "hidden"}>Export Secret</button>
         <button type="button" data-show-login-qr ${session?.method === "ephemeral" ? "" : "hidden"}>Show Login QR</button>
         <button type="button" data-copy-id ${session ? "" : "hidden"}>Copy ID</button>
@@ -342,4 +351,63 @@ function renderSessionSeed(session: Session | null, initialTab: TabName) {
 function formatAvatarFallback(npub: string) {
   if (!npub) return "•••";
   return npub.replace(/^npub1/, "").slice(0, 2).toUpperCase();
+}
+
+function renderCreditsModal() {
+  return `<div class="credits-modal-overlay" data-credits-modal hidden>
+    <div class="credits-modal">
+      <button class="credits-modal-close" type="button" data-credits-close aria-label="Close">&times;</button>
+      <h2>Buy Credits</h2>
+
+      <div class="credits-info" data-credits-info>
+        <p class="credits-balance">Current balance: <strong data-credits-current>0</strong> days</p>
+        <p class="credits-price">Price: <strong data-credits-price>...</strong> sats/day</p>
+      </div>
+
+      <div class="credits-purchase-form" data-credits-purchase-form>
+        <label class="credits-quantity-label">
+          Days to purchase:
+          <div class="credits-quantity-controls">
+            <input type="range" data-credits-quantity-slider min="1" max="21" value="5" />
+            <span class="credits-quantity-value" data-credits-quantity-value>5</span>
+          </div>
+        </label>
+        <p class="credits-total">Total: <strong data-credits-total>...</strong> sats</p>
+        <button type="button" class="credits-generate-btn" data-credits-generate>Generate Invoice</button>
+      </div>
+
+      <div class="credits-invoice" data-credits-invoice hidden>
+        <div class="credits-qr" data-credits-qr></div>
+        <div class="credits-bolt11-wrapper">
+          <input type="text" class="credits-bolt11" data-credits-bolt11 readonly />
+          <button type="button" class="credits-copy-btn" data-credits-copy>Copy</button>
+        </div>
+        <p class="credits-status" data-credits-status>Waiting for payment...</p>
+        <button type="button" class="credits-check-btn" data-credits-check>Check Payment</button>
+        <button type="button" class="credits-new-btn" data-credits-new>New Invoice</button>
+      </div>
+
+      <div class="credits-pending" data-credits-pending>
+        <h3>Pending Orders</h3>
+        <div class="credits-pending-list" data-credits-pending-list></div>
+      </div>
+
+      <div class="credits-history" data-credits-history hidden>
+        <h3>Transaction History</h3>
+        <div class="credits-history-list" data-credits-history-list></div>
+        <button type="button" class="credits-history-toggle" data-credits-history-toggle>Show History</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderNoCreditsOverlay() {
+  return `<div class="no-credits-overlay" data-no-credits-overlay hidden>
+    <div class="no-credits-content">
+      <h2>No Credits Remaining</h2>
+      <p>Purchase credits to continue tracking your habits.</p>
+      <p class="no-credits-note">Your existing data is safely stored locally.</p>
+      <button type="button" class="no-credits-buy-btn" data-no-credits-buy>Buy Credits</button>
+    </div>
+  </div>`;
 }

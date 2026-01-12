@@ -13,6 +13,14 @@ import { withErrorHandling } from "./http";
 import { initLogs, logDebug, logError } from "./logger";
 import { handleAiTasks, handleAiTasksPost, handleLatestSummary, handleSummaryPost } from "./routes/ai";
 import { createAuthHandlers } from "./routes/auth";
+import {
+  handleGetCredits,
+  handleInitializeCredits,
+  handlePurchaseCredits,
+  handleCheckOrderStatus,
+  handleGetPendingOrders,
+  handleGetTransactionHistory,
+} from "./routes/credits";
 import { handleGetEntries, handleGetRecentEntries, handleSaveEntry } from "./routes/entries";
 import { handleHome, type TabName } from "./routes/home";
 import { handleTodoCreate, handleTodoDelete, handleTodoState, handleTodoUpdate } from "./routes/todos";
@@ -30,6 +38,7 @@ import {
   handleStopTimer,
 } from "./routes/tracking";
 import { AuthService } from "./services/auth";
+import { runDailyDeduction } from "./services/credits";
 import { addConnection, removeConnection } from "./sse";
 import { serveStatic } from "./static";
 
@@ -68,6 +77,13 @@ const server = Bun.serve({
         if (pathname === "/tracking") return handleGetTracking(url, session);
         if (pathname === "/tracking/timer") return handleGetActiveTimer(session);
         if (pathname === "/tracking/timers/sessions") return handleGetTimerSessions(url, session);
+
+        // Credit endpoints
+        if (pathname === "/api/credits") return handleGetCredits(session);
+        if (pathname === "/api/credits/orders") return handleGetPendingOrders(session);
+        if (pathname === "/api/credits/history") return handleGetTransactionHistory(session);
+        const orderStatusMatch = pathname.match(/^\/api\/credits\/order\/(\d+)\/status$/);
+        if (orderStatusMatch) return handleCheckOrderStatus(session, Number(orderStatusMatch[1]));
 
         // SSE endpoint for real-time updates
         if (pathname === "/events") {
@@ -133,6 +149,8 @@ const server = Bun.serve({
         if (pathname === "/tracking") return handleSaveTracking(req, session);
         if (pathname === "/tracking/timers/start") return handleStartTimer(req, session);
         if (pathname === "/tracking/timers/stop") return handleStopTimer(req, session);
+        if (pathname === "/api/credits/initialize") return handleInitializeCredits(session);
+        if (pathname === "/api/credits/purchase") return handlePurchaseCredits(req, session);
         if (pathname === "/todos") return handleTodoCreate(req, session);
 
         const updateMatch = pathname.match(/^\/todos\/(\d+)\/update$/);
@@ -169,3 +187,42 @@ const server = Bun.serve({
 });
 
 console.log(`${APP_NAME} ready on http://localhost:${server.port}`);
+
+// Daily credit deduction cron job
+// Runs at midnight UTC
+function scheduleDailyDeduction() {
+  const now = new Date();
+  const nextMidnight = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1,
+    0, 0, 0, 0
+  ));
+  const msUntilMidnight = nextMidnight.getTime() - now.getTime();
+
+  console.log(`Credit deduction scheduled for ${nextMidnight.toISOString()} (in ${Math.round(msUntilMidnight / 1000 / 60)} minutes)`);
+
+  // Schedule first run at next midnight
+  setTimeout(() => {
+    runDeductionAndScheduleNext();
+  }, msUntilMidnight);
+}
+
+function runDeductionAndScheduleNext() {
+  console.log("Running daily credit deduction...");
+  try {
+    const result = runDailyDeduction();
+    console.log(`Credit deduction complete: ${result.success} success, ${result.failed} failed`);
+    if (result.errors.length > 0) {
+      console.error("Deduction errors:", result.errors);
+    }
+  } catch (error) {
+    console.error("Credit deduction cron failed:", error);
+  }
+
+  // Schedule next run in 24 hours
+  setTimeout(runDeductionAndScheduleNext, 24 * 60 * 60 * 1000);
+}
+
+// Start the cron scheduler
+scheduleDailyDeduction();

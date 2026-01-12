@@ -23,6 +23,13 @@ export const NOSTR_RELAYS: string[] = Bun.env.NOSTR_RELAYS
   ? Bun.env.NOSTR_RELAYS.split(",").map((s) => s.trim()).filter(Boolean)
   : DEFAULT_RELAYS;
 
+// Credits configuration
+export const MAX_CREDITS = Number(Bun.env.MAX_CREDITS ?? 21);
+export const INITIAL_CREDITS = Number(Bun.env.INITIAL_CREDITS ?? 3);
+export const MGINX_URL = Bun.env.MGINX_URL ?? "http://localhost:8787";
+export const MGINX_API_KEY = Bun.env.APIKEY_MGINX ?? "";
+export const MGINX_CREDITS_PRODUCT_ID = Bun.env.CREDITS_ID ?? "";
+
 export const STATIC_FILES = new Map<string, string>([
   ["/favicon.ico", "favicon.png"],
   ["/favicon.png", "favicon.png"],

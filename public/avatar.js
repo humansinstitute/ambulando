@@ -91,12 +91,34 @@ export const updateAvatar = async () => {
       hide(el.avatarImg);
     }
     el.avatarFallback.textContent = "•••";
+    // Hide menu items when logged out
+    hide(el.viewProfileBtn);
+    hide(el.avatarCredits);
+    hide(el.buyCreditsBtn);
+    hide(el.copyIdBtn);
+    hide(el.exportSecretBtn);
+    hide(el.showLoginQrBtn);
     return;
   }
   show(el.avatarButton);
   el.avatarFallback.textContent = formatAvatarLabel(state.session.npub);
   show(el.avatarFallback);
   el.avatarImg?.setAttribute("hidden", "hidden");
+
+  // Show menu items that are visible for all logged-in users
+  show(el.viewProfileBtn);
+  show(el.avatarCredits);
+  show(el.buyCreditsBtn);
+  show(el.copyIdBtn);
+
+  // Show ephemeral-only options
+  if (state.session.method === "ephemeral") {
+    show(el.exportSecretBtn);
+    show(el.showLoginQrBtn);
+  } else {
+    hide(el.exportSecretBtn);
+    hide(el.showLoginQrBtn);
+  }
   const currentRequest = ++avatarRequestId;
   const profile = await fetchProfile(state.session.pubkey);
   if (currentRequest !== avatarRequestId) return;

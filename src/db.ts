@@ -1,6 +1,12 @@
 import { Database } from "bun:sqlite";
 
-import type { TodoPriority, TodoState } from "./types";
+import type {
+  TodoPriority,
+  TodoState,
+  CreditTransactionType,
+  CreditOrderStatus,
+  CreditAuditEventType,
+} from "./types";
 
 export type Todo = {
   id: number;
@@ -58,6 +64,50 @@ export type TrackingData = {
   value: string;
   created_at: string;
   updated_at: string;
+};
+
+// Credit system types
+export type UserCredits = {
+  id: number;
+  npub: string;
+  balance: number;
+  first_login_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreditTransaction = {
+  id: number;
+  npub: string;
+  type: CreditTransactionType;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  reference_id: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type CreditOrder = {
+  id: number;
+  npub: string;
+  mginx_order_id: string;
+  quantity: number;
+  amount_sats: number;
+  bolt11: string;
+  status: CreditOrderStatus;
+  created_at: string;
+  updated_at: string;
+  paid_at: string | null;
+};
+
+export type CreditAuditLog = {
+  id: number;
+  npub: string;
+  event_type: CreditAuditEventType;
+  credits_at_event: number;
+  details: string | null;
+  created_at: string;
 };
 
 const db = new Database(Bun.env.DB_PATH || "do-the-other-stuff.sqlite");
@@ -147,6 +197,62 @@ db.run(`
   )
 `);
 db.run(`CREATE INDEX IF NOT EXISTS idx_tracking_owner_date ON tracking_data(owner, recorded_at)`);
+
+// Credit system tables
+db.run(`
+  CREATE TABLE IF NOT EXISTS user_credits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    npub TEXT NOT NULL UNIQUE,
+    balance INTEGER NOT NULL DEFAULT 0,
+    first_login_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS credit_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    npub TEXT NOT NULL,
+    type TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    balance_before INTEGER NOT NULL,
+    balance_after INTEGER NOT NULL,
+    reference_id TEXT DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_credit_tx_npub ON credit_transactions(npub)`);
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS credit_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    npub TEXT NOT NULL,
+    mginx_order_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    amount_sats INTEGER NOT NULL,
+    bolt11 TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    paid_at TEXT DEFAULT NULL
+  )
+`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_credit_orders_npub ON credit_orders(npub)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_credit_orders_mginx_id ON credit_orders(mginx_order_id)`);
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS credit_audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    npub TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    credits_at_event INTEGER NOT NULL,
+    details TEXT DEFAULT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_credit_audit_npub ON credit_audit_log(npub)`);
 
 const listByOwnerStmt = db.query<Todo>(
   "SELECT * FROM todos WHERE deleted = 0 AND owner = ? ORDER BY created_at DESC"
@@ -345,7 +451,11 @@ export function resetDatabase() {
   db.run("DELETE FROM entries");
   db.run("DELETE FROM tracking_data");
   db.run("DELETE FROM measures");
-  db.run("DELETE FROM sqlite_sequence WHERE name IN ('todos', 'ai_summaries', 'entries', 'measures', 'tracking_data')");
+  db.run("DELETE FROM user_credits");
+  db.run("DELETE FROM credit_transactions");
+  db.run("DELETE FROM credit_orders");
+  db.run("DELETE FROM credit_audit_log");
+  db.run("DELETE FROM sqlite_sequence WHERE name IN ('todos', 'ai_summaries', 'entries', 'measures', 'tracking_data', 'user_credits', 'credit_transactions', 'credit_orders', 'credit_audit_log')");
 }
 
 // Entry prepared statements
@@ -643,4 +753,183 @@ export function getActiveTimer(owner: string): TrackingData | null {
 export function getTimerSessions(owner: string, limit: number = 20): TrackingData[] {
   if (!owner) return [];
   return getTimerSessionsStmt.all(owner, limit);
+}
+
+// ============================================================
+// Credit system prepared statements and functions
+// ============================================================
+
+const getUserCreditsStmt = db.query<UserCredits>(
+  `SELECT * FROM user_credits WHERE npub = ?`
+);
+
+const createUserCreditsStmt = db.query<UserCredits>(
+  `INSERT INTO user_credits (npub, balance, first_login_at)
+   VALUES (?, ?, CURRENT_TIMESTAMP)
+   RETURNING *`
+);
+
+const updateUserCreditsStmt = db.query<UserCredits>(
+  `UPDATE user_credits SET balance = ?, updated_at = CURRENT_TIMESTAMP
+   WHERE npub = ?
+   RETURNING *`
+);
+
+const getAllUsersWithCreditsStmt = db.query<UserCredits>(
+  `SELECT * FROM user_credits WHERE balance > 0`
+);
+
+const insertCreditTransactionStmt = db.query<CreditTransaction>(
+  `INSERT INTO credit_transactions (npub, type, amount, balance_before, balance_after, reference_id, notes)
+   VALUES (?, ?, ?, ?, ?, ?, ?)
+   RETURNING *`
+);
+
+const getCreditTransactionsStmt = db.query<CreditTransaction>(
+  `SELECT * FROM credit_transactions WHERE npub = ? ORDER BY created_at DESC LIMIT ?`
+);
+
+const createCreditOrderStmt = db.query<CreditOrder>(
+  `INSERT INTO credit_orders (npub, mginx_order_id, quantity, amount_sats, bolt11, status)
+   VALUES (?, ?, ?, ?, ?, 'pending')
+   RETURNING *`
+);
+
+const getCreditOrderByIdStmt = db.query<CreditOrder>(
+  `SELECT * FROM credit_orders WHERE id = ? AND npub = ?`
+);
+
+const getCreditOrderByMginxIdStmt = db.query<CreditOrder>(
+  `SELECT * FROM credit_orders WHERE mginx_order_id = ?`
+);
+
+const getPendingOrdersStmt = db.query<CreditOrder>(
+  `SELECT * FROM credit_orders WHERE npub = ? AND status = 'pending' ORDER BY created_at DESC`
+);
+
+const updateCreditOrderStatusStmt = db.query<CreditOrder>(
+  `UPDATE credit_orders SET status = ?, updated_at = CURRENT_TIMESTAMP, paid_at = CASE WHEN ? = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END
+   WHERE id = ?
+   RETURNING *`
+);
+
+const insertCreditAuditLogStmt = db.query<CreditAuditLog>(
+  `INSERT INTO credit_audit_log (npub, event_type, credits_at_event, details)
+   VALUES (?, ?, ?, ?)
+   RETURNING *`
+);
+
+const getCreditAuditLogsStmt = db.query<CreditAuditLog>(
+  `SELECT * FROM credit_audit_log WHERE npub = ? ORDER BY created_at DESC LIMIT ?`
+);
+
+// Credit functions
+export function getUserCredits(npub: string): UserCredits | null {
+  if (!npub) return null;
+  const credits = getUserCreditsStmt.get(npub) as UserCredits | undefined;
+  return credits ?? null;
+}
+
+export function createUserCredits(npub: string, initialBalance: number): UserCredits | null {
+  if (!npub) return null;
+  const credits = createUserCreditsStmt.get(npub, initialBalance) as UserCredits | undefined;
+  return credits ?? null;
+}
+
+export function updateUserCreditsBalance(npub: string, newBalance: number): UserCredits | null {
+  if (!npub) return null;
+  const credits = updateUserCreditsStmt.get(newBalance, npub) as UserCredits | undefined;
+  return credits ?? null;
+}
+
+export function getAllUsersWithCredits(): UserCredits[] {
+  return getAllUsersWithCreditsStmt.all();
+}
+
+export function addCreditTransaction(
+  npub: string,
+  type: CreditTransactionType,
+  amount: number,
+  balanceBefore: number,
+  balanceAfter: number,
+  referenceId: string | null = null,
+  notes: string | null = null
+): CreditTransaction | null {
+  if (!npub) return null;
+  const tx = insertCreditTransactionStmt.get(
+    npub,
+    type,
+    amount,
+    balanceBefore,
+    balanceAfter,
+    referenceId,
+    notes
+  ) as CreditTransaction | undefined;
+  return tx ?? null;
+}
+
+export function getCreditTransactions(npub: string, limit: number = 50): CreditTransaction[] {
+  if (!npub) return [];
+  return getCreditTransactionsStmt.all(npub, limit);
+}
+
+export function createCreditOrder(
+  npub: string,
+  mginxOrderId: string,
+  quantity: number,
+  amountSats: number,
+  bolt11: string
+): CreditOrder | null {
+  if (!npub || !mginxOrderId || !bolt11) return null;
+  const order = createCreditOrderStmt.get(
+    npub,
+    mginxOrderId,
+    quantity,
+    amountSats,
+    bolt11
+  ) as CreditOrder | undefined;
+  return order ?? null;
+}
+
+export function getCreditOrderById(id: number, npub: string): CreditOrder | null {
+  if (!npub) return null;
+  const order = getCreditOrderByIdStmt.get(id, npub) as CreditOrder | undefined;
+  return order ?? null;
+}
+
+export function getCreditOrderByMginxId(mginxOrderId: string): CreditOrder | null {
+  if (!mginxOrderId) return null;
+  const order = getCreditOrderByMginxIdStmt.get(mginxOrderId) as CreditOrder | undefined;
+  return order ?? null;
+}
+
+export function getPendingOrders(npub: string): CreditOrder[] {
+  if (!npub) return [];
+  return getPendingOrdersStmt.all(npub);
+}
+
+export function updateCreditOrderStatus(id: number, status: CreditOrderStatus): CreditOrder | null {
+  const order = updateCreditOrderStatusStmt.get(status, status, id) as CreditOrder | undefined;
+  return order ?? null;
+}
+
+export function addCreditAuditLog(
+  npub: string,
+  eventType: CreditAuditEventType,
+  creditsAtEvent: number,
+  details: string | null = null
+): CreditAuditLog | null {
+  if (!npub) return null;
+  const log = insertCreditAuditLogStmt.get(npub, eventType, creditsAtEvent, details) as CreditAuditLog | undefined;
+  return log ?? null;
+}
+
+export function getCreditAuditLogs(npub: string, limit: number = 50): CreditAuditLog[] {
+  if (!npub) return [];
+  return getCreditAuditLogsStmt.all(npub, limit);
+}
+
+// Transaction helper for credit operations
+export function withCreditTransaction<T>(fn: () => T): T {
+  return db.transaction(fn)();
 }
