@@ -1,7 +1,7 @@
 // Service Worker for Three Things
 // Caches external libraries and app assets
 
-const CACHE_NAME = "three-things-v14";
+const CACHE_NAME = "three-things-v15";
 
 // External libraries to cache
 const EXTERNAL_LIBS = [
@@ -15,13 +15,11 @@ const EXTERNAL_LIBS = [
   "https://esm.sh/qrcode@1.5.3",
 ];
 
-// Local assets to cache
+// HTML page routes - NEVER cache these (they contain session state)
+const HTML_ROUTES = ["/", "/daily", "/timers", "/measures", "/results"];
+
+// Local assets to cache (JS, CSS, images - NOT HTML pages)
 const LOCAL_ASSETS = [
-  "/",
-  "/daily",
-  "/timers",
-  "/measures",
-  "/results",
   "/app.js",
   "/app.css",
   "/auth.js",
@@ -112,8 +110,19 @@ function isImageRequest(url) {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // For API calls (entries, auth, credits), always use network
-  if (url.pathname.startsWith("/entries") || url.pathname.startsWith("/auth") || url.pathname.startsWith("/api/credits")) {
+  // For HTML page routes, ALWAYS use network (they contain session state)
+  if (HTML_ROUTES.includes(url.pathname)) {
+    return;
+  }
+
+  // For API calls (entries, auth, credits, tracking), always use network
+  if (
+    url.pathname.startsWith("/entries") ||
+    url.pathname.startsWith("/auth") ||
+    url.pathname.startsWith("/api") ||
+    url.pathname.startsWith("/tracking") ||
+    url.pathname.startsWith("/events")
+  ) {
     return;
   }
 
