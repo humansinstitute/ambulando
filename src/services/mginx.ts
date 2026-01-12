@@ -114,7 +114,7 @@ class MginxClient {
     const result = await this.fetch<MginxOrderResponse>("/api/orders", {
       method: "POST",
       body: JSON.stringify({
-        productId: this.productId,
+        product_id: this.productId,
         quantity,
       }),
     });
