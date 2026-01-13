@@ -362,7 +362,7 @@ function renderCreditsModal() {
       <h2>Buy Credits</h2>
 
       <div class="credits-info" data-credits-info>
-        <p class="credits-balance">Current balance: <strong data-credits-current>0</strong> hours</p>
+        <p class="credits-balance">Current balance: <strong data-credits-current>0 hours</strong></p>
         <p class="credits-price">Price: <strong data-credits-price>...</strong> sats/hour</p>
       </div>
 

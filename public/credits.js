@@ -98,7 +98,7 @@ function updateCreditsState(data) {
 
 export function updateCreditsDisplay() {
   setText(el.creditsDisplay, String(creditsState.balance));
-  setText(el.creditsCurrent, String(creditsState.balance));
+  setText(el.creditsCurrent, formatBalanceDisplay(creditsState.balance));
 
   if (creditsState.pricePerCredit) {
     setText(el.creditsPrice, String(creditsState.pricePerCredit));
@@ -460,6 +460,24 @@ async function loadHistory() {
   } catch (err) {
     console.error("Failed to load history:", err);
   }
+}
+
+function formatBalanceDisplay(hours) {
+  if (hours <= 0) return "0 hours";
+
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+
+  if (days === 0) {
+    return `${hours} hour${hours !== 1 ? "s" : ""}`;
+  }
+
+  let daysHoursStr = `${days} day${days !== 1 ? "s" : ""}`;
+  if (remainingHours > 0) {
+    daysHoursStr += ` ${remainingHours} hour${remainingHours !== 1 ? "s" : ""}`;
+  }
+
+  return `${daysHoursStr} (${hours} hours)`;
 }
 
 function formatTxType(type) {
