@@ -8,6 +8,14 @@ let timeMeasures = [];
 let timerSessions = {}; // Map of measureId -> array of sessions
 let runningTimers = {}; // Map of measureId -> { start, intervalId }
 
+// Check if user is typing in an input/textarea (to prevent focus stealing)
+function isUserTyping() {
+  const active = document.activeElement;
+  if (!active) return false;
+  const tag = active.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea";
+}
+
 export async function initTimers() {
   if (!state.session) return;
 
@@ -20,11 +28,15 @@ export async function initTimers() {
 
   // Listen for measures changes
   window.addEventListener("measures-changed", () => {
+    // Skip re-render if user is typing in an input
+    if (isUserTyping()) return;
     void loadTimersData();
   });
 
   // Listen for SSE timer updates
   window.addEventListener("sse:timers", () => {
+    // Skip re-render if user is typing in an input
+    if (isUserTyping()) return;
     void loadTimersData();
   });
 

@@ -9,6 +9,14 @@ let editingMeasure = null;
 let draggedItem = null;
 let openMenuId = null; // Track which measure's menu is open
 
+// Check if user is typing in an input/textarea (to prevent focus stealing)
+function isUserTyping() {
+  const active = document.activeElement;
+  if (!active) return false;
+  const tag = active.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea";
+}
+
 const TYPE_LABELS = {
   number: "Number",
   text: "Text",
@@ -54,6 +62,8 @@ export async function initMeasures() {
 
   // Listen for SSE updates to reload measures
   window.addEventListener("sse:measures", () => {
+    // Skip re-render if user is typing in an input
+    if (isUserTyping()) return;
     void loadMeasures();
     // Also notify tracker to refresh
     window.dispatchEvent(new CustomEvent("measures-changed"));

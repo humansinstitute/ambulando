@@ -12,6 +12,14 @@ let timerIntervals = {}; // Map of measureId -> interval ID
 let activeTimerInterval = null; // Interval for banner timer
 let activeTimerData = null; // Currently active timer from server
 
+// Check if user is typing in an input/textarea (to prevent focus stealing)
+function isUserTyping() {
+  const active = document.activeElement;
+  if (!active) return false;
+  const tag = active.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea";
+}
+
 // Initialize date from URL or default to today
 function initializeDate(dateStr = null) {
   if (dateStr) {
@@ -50,16 +58,22 @@ export async function initTracker() {
 
   // Listen for measures changes
   window.addEventListener("measures-changed", () => {
+    // Skip re-render if user is typing in an input
+    if (isUserTyping()) return;
     void loadMeasuresAndRender();
   });
 
   // Listen for SSE tracking updates
   window.addEventListener("sse:tracking", () => {
+    // Skip re-render if user is typing in an input
+    if (isUserTyping()) return;
     void loadTrackingData();
   });
 
   // Listen for SSE timer updates
   window.addEventListener("sse:timers", () => {
+    // Skip re-render if user is typing in an input
+    if (isUserTyping()) return;
     void loadTrackingData();
     void loadActiveTimer();
   });

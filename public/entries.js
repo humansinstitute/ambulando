@@ -18,6 +18,14 @@ let lastHistoryDate = null; // For pagination
 let isLoading = false;
 let editingSlot = null; // Track which slot we're editing (null = adding new)
 
+// Check if user is typing in an input/textarea (to prevent focus stealing)
+function isUserTyping() {
+  const active = document.activeElement;
+  if (!active) return false;
+  const tag = active.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea";
+}
+
 export async function initEntries() {
   if (!state.session) return;
 
@@ -138,7 +146,10 @@ function renderTodayState() {
 
     if (el.entryInput && entry) {
       el.entryInput.value = entry.content;
-      el.entryInput.focus();
+      // Only focus if user isn't already typing elsewhere
+      if (!isUserTyping()) {
+        el.entryInput.focus();
+      }
     }
   } else if (completedCount >= 3) {
     // All done for today
@@ -160,10 +171,12 @@ function renderTodayState() {
       el.entrySubmit.textContent = nextSlot === 3 ? "Finish" : "Continue";
     }
 
-    // Clear and focus input
+    // Clear and focus input (only if user isn't already typing elsewhere)
     if (el.entryInput) {
       el.entryInput.value = "";
-      el.entryInput.focus();
+      if (!isUserTyping()) {
+        el.entryInput.focus();
+      }
     }
   }
 }
