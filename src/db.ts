@@ -555,14 +555,10 @@ const getMeasureByIdStmt = db.query<Measure>(
   `SELECT * FROM measures WHERE id = ? AND owner = ?`
 );
 
-const upsertMeasureStmt = db.query<Measure>(
+// Simple INSERT since names are now encrypted (no UNIQUE constraint)
+const insertMeasureStmt = db.query<Measure>(
   `INSERT INTO measures (owner, name, type, encrypted, sort_order, config)
    VALUES (?, ?, ?, ?, ?, ?)
-   ON CONFLICT(owner, name) DO UPDATE SET
-     type = excluded.type,
-     encrypted = excluded.encrypted,
-     sort_order = excluded.sort_order,
-     config = excluded.config
    RETURNING *`
 );
 
@@ -591,7 +587,7 @@ export function getMeasureById(id: number, owner: string): Measure | null {
   return measure ?? null;
 }
 
-export function upsertMeasure(
+export function createMeasure(
   owner: string,
   name: string,
   type: MeasureType,
@@ -600,9 +596,9 @@ export function upsertMeasure(
   config: string | null = null
 ): Measure | null {
   if (!owner || !name || !type) return null;
-  const measure = upsertMeasureStmt.get(
+  const measure = insertMeasureStmt.get(
     owner,
-    name.trim(),
+    name,
     type,
     encrypted ? 1 : 0,
     sortOrder,

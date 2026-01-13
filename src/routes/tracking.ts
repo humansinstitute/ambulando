@@ -1,7 +1,7 @@
 import {
   getMeasures,
   getMeasureById,
-  upsertMeasure,
+  createMeasure,
   updateMeasure,
   deleteMeasure,
   updateMeasureSortOrders,
@@ -87,7 +87,7 @@ export async function handleSaveMeasure(req: Request, session: Session | null) {
     measure = updateMeasure(id, session.npub, name, type, isEncrypted, sortOrder, configValue);
   } else {
     // Create new
-    measure = upsertMeasure(session.npub, name, type, isEncrypted, sortOrder, configValue);
+    measure = createMeasure(session.npub, name, type, isEncrypted, sortOrder, configValue);
   }
 
   if (!measure) {
