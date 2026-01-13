@@ -3,16 +3,31 @@
 import { elements as el, show, hide, setText } from "./dom.js";
 import { encryptEntry, decryptEntry } from "./entryCrypto.js";
 import { state } from "./state.js";
+import { updateDailyDate, getCurrentDate } from "./tabs.js";
 
 let measures = [];
 let trackingData = {}; // Map of measureId -> tracking record
-let currentDate = new Date();
+let currentDate = null; // Will be initialized in initTracker
 let timerIntervals = {}; // Map of measureId -> interval ID
 let activeTimerInterval = null; // Interval for banner timer
 let activeTimerData = null; // Currently active timer from server
 
+// Initialize date from URL or default to today
+function initializeDate(dateStr = null) {
+  if (dateStr) {
+    // Parse YYYY-MM-DD string
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
+  return new Date();
+}
+
 export async function initTracker() {
   if (!state.session) return;
+
+  // Initialize current date from server-provided value or today
+  const initialDate = window.__INITIAL_DATE__ || getCurrentDate();
+  currentDate = initializeDate(initialDate);
 
   // Wire up date navigation
   el.prevDayBtn?.addEventListener("click", () => navigateDate(-1));
@@ -24,6 +39,10 @@ export async function initTracker() {
   // Listen for tab switches
   window.addEventListener("tab-switched", (e) => {
     if (e.detail.tab === "track") {
+      // If date provided in event, use it
+      if (e.detail.date) {
+        currentDate = initializeDate(e.detail.date);
+      }
       void loadTrackingData();
       void loadActiveTimer();
     }
@@ -680,6 +699,8 @@ function formatDuration(seconds) {
 function navigateDate(delta) {
   currentDate = new Date(currentDate);
   currentDate.setDate(currentDate.getDate() + delta);
+  // Update URL with new date
+  updateDailyDate(getLocalDateString(currentDate));
   void loadTrackingData();
 }
 
@@ -795,5 +816,7 @@ function handleActiveTimerGoto() {
   // Navigate to the date when the timer was started
   const startDate = new Date(activeTimerData.decryptedValue.start);
   currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  // Update URL with new date
+  updateDailyDate(getLocalDateString(currentDate));
   void loadTrackingData();
 }

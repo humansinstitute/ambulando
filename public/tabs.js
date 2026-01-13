@@ -4,6 +4,7 @@ import { elements as el, show, hide } from "./dom.js";
 import { state } from "./state.js";
 
 let currentTab = "track";
+let currentDate = null; // Track the current date for daily tab
 
 const panels = {
   track: () => el.trackPanel,
@@ -37,6 +38,23 @@ const initialTabMap = {
   results: "results",
 };
 
+// Parse URL to extract tab and optional date
+function parseUrl(pathname) {
+  // Check for /daily/YYYY-MM-DD pattern
+  const dailyDateMatch = pathname.match(/^\/daily\/(\d{4}-\d{2}-\d{2})$/);
+  if (dailyDateMatch) {
+    return { tab: "track", date: dailyDateMatch[1] };
+  }
+
+  // Standard tab routes
+  const tab = urlToTab[pathname];
+  if (tab) {
+    return { tab, date: null };
+  }
+
+  return { tab: "track", date: null };
+}
+
 export function initTabs() {
   if (!el.tabNav) return;
 
@@ -50,27 +68,34 @@ export function initTabs() {
 
   // Handle browser back/forward navigation
   window.addEventListener("popstate", () => {
-    const tab = urlToTab[window.location.pathname] || "track";
-    switchTab(tab, false); // false = don't update URL (already changed)
+    const { tab, date } = parseUrl(window.location.pathname);
+    currentDate = date;
+    switchTab(tab, false, date); // false = don't update URL (already changed)
   });
 
-  // Determine initial tab from server-provided value or URL
+  // Determine initial tab and date from server-provided values or URL
   const serverInitialTab = window.__INITIAL_TAB__;
+  const serverInitialDate = window.__INITIAL_DATE__;
   const initialTab = serverInitialTab ? initialTabMap[serverInitialTab] || "track" : "track";
+  currentDate = serverInitialDate || null;
 
-  switchTab(initialTab, false); // Don't push state on initial load
+  switchTab(initialTab, false, currentDate); // Don't push state on initial load
 }
 
-export function switchTab(tab, updateUrl = true) {
+export function switchTab(tab, updateUrl = true, date = null) {
   if (!panels[tab]) return;
 
   currentTab = tab;
 
   // Update URL if requested (and different from current)
   if (updateUrl && tabToUrl[tab]) {
-    const newPath = tabToUrl[tab];
+    let newPath = tabToUrl[tab];
+    // For daily tab, include date in URL if set
+    if (tab === "track" && currentDate) {
+      newPath = `/daily/${currentDate}`;
+    }
     if (window.location.pathname !== newPath) {
-      history.pushState({ tab }, "", newPath);
+      history.pushState({ tab, date: currentDate }, "", newPath);
     }
   }
 
@@ -90,11 +115,29 @@ export function switchTab(tab, updateUrl = true) {
   });
 
   // Trigger panel-specific load if needed
-  window.dispatchEvent(new CustomEvent("tab-switched", { detail: { tab } }));
+  window.dispatchEvent(new CustomEvent("tab-switched", { detail: { tab, date } }));
 }
 
 export function getCurrentTab() {
   return currentTab;
+}
+
+// Update the URL when navigating dates in the daily tracker
+export function updateDailyDate(dateStr) {
+  currentDate = dateStr;
+
+  if (currentTab !== "track") return;
+
+  // Update URL without triggering a page load
+  const newPath = dateStr ? `/daily/${dateStr}` : "/daily";
+  if (window.location.pathname !== newPath) {
+    history.replaceState({ tab: "track", date: dateStr }, "", newPath);
+  }
+}
+
+// Get the current date from URL/state
+export function getCurrentDate() {
+  return currentDate;
 }
 
 export function showTabsIfLoggedIn() {

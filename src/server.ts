@@ -127,6 +127,12 @@ const server = Bun.serve({
         }
 
         // Tab routes - all serve the same page with different initial tab
+        // Handle /daily/:date pattern (e.g., /daily/2024-01-10)
+        const dailyDateMatch = pathname.match(/^\/daily\/(\d{4}-\d{2}-\d{2})$/);
+        if (dailyDateMatch) {
+          return handleHome(url, session, "daily", dailyDateMatch[1]);
+        }
+
         const tabRoutes: Record<string, TabName> = {
           "/": "daily",
           "/daily": "daily",

@@ -7,9 +7,10 @@ type TabName = "daily" | "timers" | "measures" | "results";
 type RenderArgs = {
   session: Session | null;
   initialTab?: TabName;
+  initialDate?: string; // YYYY-MM-DD format
 };
 
-export function renderHomePage({ session, initialTab = "daily" }: RenderArgs) {
+export function renderHomePage({ session, initialTab = "daily", initialDate }: RenderArgs) {
   return `<!doctype html>
 <html lang="en">
 ${renderHead()}
@@ -31,7 +32,7 @@ ${renderHead()}
     ${renderCreditsModal()}
     ${renderNoCreditsOverlay()}
   </main>
-  ${renderSessionSeed(session, initialTab)}
+  ${renderSessionSeed(session, initialTab, initialDate)}
   <script type="module" src="/app.js"></script>
 </body>
 </html>`;
@@ -338,13 +339,14 @@ function renderProfileModal() {
   </div>`;
 }
 
-function renderSessionSeed(session: Session | null, initialTab: TabName) {
+function renderSessionSeed(session: Session | null, initialTab: TabName, initialDate?: string) {
   return `<script>
     window.__NOSTR_SESSION__ = ${JSON.stringify(session ?? null)};
     window.__NOSTR_RELAYS__ = ${JSON.stringify(NOSTR_RELAYS)};
     window.__APP_NAME__ = ${JSON.stringify(APP_NAME)};
     window.__APP_FAVICON__ = "/favicon.png";
     window.__INITIAL_TAB__ = ${JSON.stringify(initialTab)};
+    window.__INITIAL_DATE__ = ${JSON.stringify(initialDate ?? null)};
   </script>`;
 }
 

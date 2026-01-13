@@ -1,7 +1,7 @@
 // Service Worker for Three Things
 // Caches external libraries and app assets
 
-const CACHE_NAME = "three-things-v15";
+const CACHE_NAME = "three-things-v16";
 
 // External libraries to cache
 const EXTERNAL_LIBS = [
@@ -17,6 +17,14 @@ const EXTERNAL_LIBS = [
 
 // HTML page routes - NEVER cache these (they contain session state)
 const HTML_ROUTES = ["/", "/daily", "/timers", "/measures", "/results"];
+
+// Check if a path is an HTML route (including /daily/:date pattern)
+function isHtmlRoute(pathname) {
+  if (HTML_ROUTES.includes(pathname)) return true;
+  // Match /daily/YYYY-MM-DD pattern
+  if (/^\/daily\/\d{4}-\d{2}-\d{2}$/.test(pathname)) return true;
+  return false;
+}
 
 // Local assets to cache (JS, CSS, images - NOT HTML pages)
 const LOCAL_ASSETS = [
@@ -111,7 +119,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
   // For HTML page routes, ALWAYS use network (they contain session state)
-  if (HTML_ROUTES.includes(url.pathname)) {
+  if (isHtmlRoute(url.pathname)) {
     return;
   }
 
