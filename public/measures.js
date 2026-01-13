@@ -155,27 +155,21 @@ async function decryptMeasures(rawMeasures) {
 // Migrate a plaintext measure to encrypted storage
 async function migrateMeasureToEncrypted(id, name, config) {
   try {
-    console.log(`Migrating measure ${id} to encrypted storage...`);
-
     const encryptedName = await encryptEntry(name);
     const encryptedConfig = config ? await encryptEntry(config) : null;
 
-    const response = await fetch("/api/measures", {
+    await fetch("/api/measures", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id,
         name: encryptedName,
         config: encryptedConfig,
-        _migrationOnly: true, // Signal to server this is just updating encryption
+        _migrationOnly: true,
       }),
     });
-
-    if (response.ok) {
-      console.log(`Measure ${id} migrated successfully`);
-    }
-  } catch (err) {
-    console.error(`Failed to migrate measure ${id}:`, err);
+  } catch (_err) {
+    // Migration failed silently - will retry on next load
   }
 }
 
