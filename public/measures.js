@@ -103,10 +103,15 @@ async function decryptMeasures(rawMeasures) {
       let needsMigration = false;
 
       try {
-        name = await decryptEntry(m.name);
-      } catch (err) {
+        const decryptedName = await decryptEntry(m.name);
+        if (decryptedName && typeof decryptedName === "string") {
+          name = decryptedName;
+        } else {
+          // Decryption returned invalid value - treat as plaintext, flag for migration
+          needsMigration = true;
+        }
+      } catch (_err) {
         // If decryption fails, it's likely plaintext (pre-encryption data)
-        // Keep the original name and flag for migration
         needsMigration = true;
       }
 
@@ -114,10 +119,12 @@ async function decryptMeasures(rawMeasures) {
       let config = m.config;
       if (m.config) {
         try {
-          config = await decryptEntry(m.config);
-        } catch (err) {
+          const decryptedConfig = await decryptEntry(m.config);
+          if (decryptedConfig && typeof decryptedConfig === "string") {
+            config = decryptedConfig;
+          }
+        } catch (_err) {
           // If decryption fails, keep as-is (might be plaintext JSON)
-          // Don't flag for migration here - config might just be null
         }
       }
 

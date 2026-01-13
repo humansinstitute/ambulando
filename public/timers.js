@@ -65,16 +65,22 @@ async function decryptMeasures(rawMeasures) {
       // Try to decrypt name
       let name = m.name;
       try {
-        name = await decryptEntry(m.name);
+        const decryptedName = await decryptEntry(m.name);
+        if (decryptedName && typeof decryptedName === "string") {
+          name = decryptedName;
+        }
       } catch (_err) {
-        // If decryption fails, it's likely plaintext (pre-encryption data)
+        // If decryption fails, keep original (plaintext) name
       }
 
       // Try to decrypt config if present
       let config = m.config;
       if (m.config) {
         try {
-          config = await decryptEntry(m.config);
+          const decryptedConfig = await decryptEntry(m.config);
+          if (decryptedConfig && typeof decryptedConfig === "string") {
+            config = decryptedConfig;
+          }
         } catch (_err) {
           // If decryption fails, keep as-is
         }
