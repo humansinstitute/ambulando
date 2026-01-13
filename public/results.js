@@ -85,11 +85,48 @@ async function loadMeasures() {
     if (!response.ok) throw new Error("Failed to fetch measures");
 
     const data = await response.json();
-    measures = data.measures || [];
+    const rawMeasures = data.measures || [];
+
+    // Decrypt measure names and configs
+    measures = await decryptMeasures(rawMeasures);
   } catch (err) {
     console.error("Failed to load measures:", err);
     measures = [];
   }
+}
+
+// Decrypt measure names and config fields
+async function decryptMeasures(rawMeasures) {
+  const decrypted = [];
+
+  for (const m of rawMeasures) {
+    try {
+      // Try to decrypt name
+      let name = m.name;
+      try {
+        name = await decryptEntry(m.name);
+      } catch (_err) {
+        // If decryption fails, it's likely plaintext (pre-encryption data)
+      }
+
+      // Try to decrypt config if present
+      let config = m.config;
+      if (m.config) {
+        try {
+          config = await decryptEntry(m.config);
+        } catch (_err) {
+          // If decryption fails, keep as-is
+        }
+      }
+
+      decrypted.push({ ...m, name, config });
+    } catch (err) {
+      console.error(`Failed to process measure ${m.id}:`, err);
+      decrypted.push({ ...m, name: "[Unable to decrypt]" });
+    }
+  }
+
+  return decrypted;
 }
 
 async function loadResults(reset = true) {

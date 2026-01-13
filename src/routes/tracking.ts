@@ -38,7 +38,32 @@ export async function handleSaveMeasure(req: Request, session: Session | null) {
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
-  const { id, name, type, encrypted, sort_order, config } = body;
+  const { id, name, type, encrypted, sort_order, config, _migrationOnly } = body;
+
+  // Migration-only mode: just update name and config for encryption migration
+  if (_migrationOnly && id) {
+    const existing = getMeasureById(id, session.npub);
+    if (!existing) {
+      return jsonResponse({ error: "Measure not found" }, 404);
+    }
+
+    // Only update name and config fields
+    const measure = updateMeasure(
+      id,
+      session.npub,
+      name || existing.name,
+      existing.type,
+      existing.encrypted,
+      existing.sort_order,
+      config !== undefined ? config : existing.config
+    );
+
+    if (!measure) {
+      return jsonResponse({ error: "Failed to migrate measure" }, 500);
+    }
+
+    return jsonResponse({ measure });
+  }
 
   if (!name || typeof name !== "string") {
     return jsonResponse({ error: "name required" }, 400);
@@ -49,24 +74,20 @@ export async function handleSaveMeasure(req: Request, session: Session | null) {
     return jsonResponse({ error: "type must be one of: number, text, goodbad, time, options, rating" }, 400);
   }
 
-  // Validate options config
-  if (type === "options") {
-    if (!config || !Array.isArray(config) || config.length < 2 || config.length > 5) {
-      return jsonResponse({ error: "options type requires 2-5 options in config array" }, 400);
-    }
-  }
-
+  // Config is now encrypted ciphertext, so we don't validate structure
+  // (validation happens client-side before encryption)
   const isEncrypted = encrypted !== false; // default true
   const sortOrder = typeof sort_order === "number" ? sort_order : 0;
-  const configJson = config ? JSON.stringify(config) : null;
+  // Config is already a string (encrypted ciphertext), store as-is
+  const configValue = config ?? null;
 
   let measure;
   if (id) {
     // Update existing
-    measure = updateMeasure(id, session.npub, name, type, isEncrypted, sortOrder, configJson);
+    measure = updateMeasure(id, session.npub, name, type, isEncrypted, sortOrder, configValue);
   } else {
     // Create new
-    measure = upsertMeasure(session.npub, name, type, isEncrypted, sortOrder, configJson);
+    measure = upsertMeasure(session.npub, name, type, isEncrypted, sortOrder, configValue);
   }
 
   if (!measure) {

@@ -1,6 +1,7 @@
 // Measures management for Daily Tracker
 
 import { elements as el, show, hide, setText } from "./dom.js";
+import { encryptEntry, decryptEntry } from "./entryCrypto.js";
 import { state } from "./state.js";
 
 let measures = [];
@@ -79,12 +80,95 @@ export async function loadMeasures() {
     if (!response.ok) throw new Error("Failed to fetch measures");
 
     const data = await response.json();
-    measures = data.measures || [];
+    const rawMeasures = data.measures || [];
+
+    // Decrypt measure names and configs
+    measures = await decryptMeasures(rawMeasures);
     renderMeasuresList();
   } catch (err) {
     console.error("Failed to load measures:", err);
     measures = [];
     renderMeasuresList();
+  }
+}
+
+// Decrypt measure names and config fields
+async function decryptMeasures(rawMeasures) {
+  const decrypted = [];
+
+  for (const m of rawMeasures) {
+    try {
+      // Try to decrypt name
+      let name = m.name;
+      let needsMigration = false;
+
+      try {
+        name = await decryptEntry(m.name);
+      } catch (err) {
+        // If decryption fails, it's likely plaintext (pre-encryption data)
+        // Keep the original name and flag for migration
+        needsMigration = true;
+      }
+
+      // Try to decrypt config if present
+      let config = m.config;
+      if (m.config) {
+        try {
+          config = await decryptEntry(m.config);
+        } catch (err) {
+          // If decryption fails, keep as-is (might be plaintext JSON)
+          // Don't flag for migration here - config might just be null
+        }
+      }
+
+      decrypted.push({
+        ...m,
+        name,
+        config,
+        _needsMigration: needsMigration,
+      });
+
+      // Auto-migrate plaintext measures to encrypted
+      if (needsMigration) {
+        void migrateMeasureToEncrypted(m.id, name, config);
+      }
+    } catch (err) {
+      console.error(`Failed to process measure ${m.id}:`, err);
+      decrypted.push({
+        ...m,
+        name: "[Unable to decrypt]",
+        _decryptError: true,
+      });
+    }
+  }
+
+  return decrypted;
+}
+
+// Migrate a plaintext measure to encrypted storage
+async function migrateMeasureToEncrypted(id, name, config) {
+  try {
+    console.log(`Migrating measure ${id} to encrypted storage...`);
+
+    const encryptedName = await encryptEntry(name);
+    const encryptedConfig = config ? await encryptEntry(config) : null;
+
+    const response = await fetch("/api/measures", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        name: encryptedName,
+        config: encryptedConfig,
+        _migrationOnly: true, // Signal to server this is just updating encryption
+      }),
+    });
+
+    if (response.ok) {
+      console.log(`Measure ${id} migrated successfully`);
+    }
+  } catch (err) {
+    console.error(`Failed to migrate measure ${id}:`, err);
   }
 }
 
@@ -261,15 +345,19 @@ async function handleSaveMeasure(e) {
   }
 
   try {
+    // Encrypt name and config before saving
+    const encryptedName = await encryptEntry(name);
+    const encryptedConfig = config ? await encryptEntry(JSON.stringify(config)) : null;
+
     const response = await fetch("/api/measures", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id,
-        name,
+        name: encryptedName,
         type,
         encrypted,
-        config,
+        config: encryptedConfig,
         sort_order: editingMeasure?.sort_order ?? measures.length,
       }),
     });

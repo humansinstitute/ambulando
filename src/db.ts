@@ -167,6 +167,7 @@ db.run(`
 `);
 
 // Measure definitions (user-configurable tracking metrics)
+// Note: name and config fields store NIP-44 encrypted ciphertext
 db.run(`
   CREATE TABLE IF NOT EXISTS measures (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,12 +177,38 @@ db.run(`
     encrypted INTEGER NOT NULL DEFAULT 1,
     sort_order INTEGER NOT NULL DEFAULT 0,
     config TEXT DEFAULT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(owner, name)
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )
 `);
 // Migration for existing tables
 addColumn("ALTER TABLE measures ADD COLUMN config TEXT DEFAULT NULL");
+
+// Migration: Remove UNIQUE(owner, name) constraint for encrypted names
+// SQLite requires table recreation to drop constraints
+try {
+  const hasConstraint = db.query("SELECT sql FROM sqlite_master WHERE type='table' AND name='measures'").get() as { sql: string } | null;
+  if (hasConstraint?.sql?.includes("UNIQUE(owner, name)")) {
+    db.run("BEGIN TRANSACTION");
+    db.run(`CREATE TABLE measures_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner TEXT NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      encrypted INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      config TEXT DEFAULT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+    db.run("INSERT INTO measures_new SELECT * FROM measures");
+    db.run("DROP TABLE measures");
+    db.run("ALTER TABLE measures_new RENAME TO measures");
+    db.run("COMMIT");
+    console.log("Migrated measures table: removed UNIQUE constraint");
+  }
+} catch (err) {
+  console.error("Migration error (measures UNIQUE constraint):", err);
+  try { db.run("ROLLBACK"); } catch { /* ignore */ }
+}
 
 // Tracked data points
 db.run(`
