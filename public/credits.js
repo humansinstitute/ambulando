@@ -11,6 +11,7 @@ let creditsState = {
   hasAccess: false,
   pricePerCredit: null,
   isFirstLogin: true,
+  checked: false, // Whether we've verified credits with server
 };
 
 let currentOrder = null;
@@ -93,6 +94,7 @@ function updateCreditsState(data) {
     hasAccess: data.hasAccess ?? false,
     pricePerCredit: data.pricePerCredit ?? null,
     isFirstLogin: data.isFirstLogin ?? false,
+    checked: true, // Mark as verified with server
   };
 }
 
@@ -127,6 +129,13 @@ function updateQuantityDisplay() {
 
 export function checkAccessState() {
   if (!state.session) {
+    hide(el.noCreditsOverlay);
+    return;
+  }
+
+  // Only show "no credits" overlay after we've verified with server
+  // This prevents flash of "out of credits" during initial load
+  if (!creditsState.checked) {
     hide(el.noCreditsOverlay);
     return;
   }
@@ -524,6 +533,7 @@ export function clearCredits() {
     hasAccess: false,
     pricePerCredit: null,
     isFirstLogin: true,
+    checked: false, // Reset verification state
   };
   currentOrder = null;
   stopPolling();
