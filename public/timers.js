@@ -7,6 +7,7 @@ import { state } from "./state.js";
 let timeMeasures = [];
 let timerSessions = {}; // Map of measureId -> array of sessions
 let runningTimers = {}; // Map of measureId -> { start, intervalId }
+let isLoadingTimers = false; // Prevent concurrent loads
 
 // Check if user is typing in an input/textarea (to prevent focus stealing)
 function isUserTyping() {
@@ -46,10 +47,16 @@ export async function initTimers() {
 
 async function loadTimersData() {
   if (!state.session) return;
+  if (isLoadingTimers) return; // Prevent concurrent loads
 
-  await loadTimeMeasures();
-  await loadTimerSessions();
-  renderTimersPanel();
+  isLoadingTimers = true;
+  try {
+    await loadTimeMeasures();
+    await loadTimerSessions();
+    renderTimersPanel();
+  } finally {
+    isLoadingTimers = false;
+  }
 }
 
 async function loadTimeMeasures() {
@@ -409,11 +416,20 @@ async function stopTimer(measureId) {
     }
     delete runningTimers[measureId];
 
-    // Re-render immediately to show stopped state
+    // Update local state with stopped timer data (avoids duplicate from stale render)
+    if (timerSessions[measureId]) {
+      const sessionIndex = timerSessions[measureId].findIndex(
+        (s) => s.id === running.sessionId
+      );
+      if (sessionIndex !== -1) {
+        timerSessions[measureId][sessionIndex].decryptedValue = timerData;
+      }
+    }
+
+    // Re-render with updated local state
     renderTimersPanel();
 
-    // Then reload sessions in background for history update
-    void loadTimerSessions().then(() => renderTimersPanel());
+    // SSE will trigger a fresh load; no need for manual reload here
   } catch (err) {
     console.error("Failed to stop timer:", err);
   }

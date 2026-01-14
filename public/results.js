@@ -628,38 +628,75 @@ function renderRatingChart(data) {
   `;
 }
 
-// Duration bar chart for time trackers
+// Duration bar chart for time trackers - shows on/off hours per day
 function renderDurationChart(data) {
-  // Group by date and sum durations
-  const byDate = new Map();
+  // Calculate on-time seconds for each day (handles timers spanning midnight)
+  const onTimeByDate = new Map();
+
   for (const d of data) {
-    const date = d.recorded_at.slice(0, 10);
-    const duration = typeof d.decryptedValue === "object" ? d.decryptedValue.duration || 0 : 0;
-    byDate.set(date, (byDate.get(date) || 0) + duration);
+    if (typeof d.decryptedValue !== "object" || !d.decryptedValue.start) continue;
+
+    const start = new Date(d.decryptedValue.start);
+    const end = d.decryptedValue.end ? new Date(d.decryptedValue.end) : new Date(); // Running timer uses now
+
+    // Process each day the timer spans
+    let current = new Date(start);
+    while (current < end) {
+      const dateStr = getLocalDateString(current);
+
+      // Start of this day (midnight)
+      const dayStart = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+      // End of this day (midnight next day)
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+      // Calculate seconds of "on time" for this day
+      const periodStart = current > dayStart ? current : dayStart;
+      const periodEnd = end < dayEnd ? end : dayEnd;
+      const secondsOn = Math.max(0, Math.floor((periodEnd - periodStart) / 1000));
+
+      onTimeByDate.set(dateStr, (onTimeByDate.get(dateStr) || 0) + secondsOn);
+
+      // Move to next day
+      current = dayEnd;
+    }
   }
 
-  if (byDate.size === 0) return '<p class="chart-empty">No duration data</p>';
-
-  // Get last 14 days for bars (more readable)
+  // Get last 14 days for bars
   const bars = [];
   const maxDays = 14;
+  const secondsInDay = 24 * 60 * 60;
+
   for (let i = maxDays - 1; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
     const dateStr = getLocalDateString(date);
-    const duration = byDate.get(dateStr) || 0;
-    bars.push({ date: dateStr, duration, dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2) });
+    const onSeconds = onTimeByDate.get(dateStr) || 0;
+    const offSeconds = secondsInDay - onSeconds;
+    bars.push({
+      date: dateStr,
+      onSeconds,
+      offSeconds,
+      dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2),
+    });
   }
 
-  const maxDuration = Math.max(...bars.map((b) => b.duration), 1);
-  const totalSeconds = bars.reduce((sum, b) => sum + b.duration, 0);
+  const hasData = bars.some((b) => b.onSeconds > 0);
+  if (!hasData) return '<p class="chart-empty">No duration data</p>';
+
+  const totalOnSeconds = bars.reduce((sum, b) => sum + b.onSeconds, 0);
+  const daysWithData = bars.filter((b) => b.onSeconds > 0).length;
 
   const barsHtml = bars
     .map((b) => {
-      const heightPercent = (b.duration / maxDuration) * 100;
+      const onPercent = (b.onSeconds / secondsInDay) * 100;
+      const onHours = (b.onSeconds / 3600).toFixed(1);
+      const offHours = (b.offSeconds / 3600).toFixed(1);
       return `
-        <div class="duration-bar-wrapper" title="${b.date}: ${formatDuration(b.duration)}">
-          <div class="duration-bar" style="height: ${heightPercent}%"></div>
+        <div class="duration-bar-wrapper" title="${b.date}: ${onHours}h on, ${offHours}h off">
+          <div class="duration-bar-stack">
+            <div class="duration-bar-off" style="height: ${100 - onPercent}%"></div>
+            <div class="duration-bar-on" style="height: ${onPercent}%"></div>
+          </div>
           <span class="duration-bar-label">${b.dayLabel}</span>
         </div>
       `;
@@ -667,12 +704,16 @@ function renderDurationChart(data) {
     .join("");
 
   return `
-    <div class="duration-chart">
+    <div class="duration-chart stacked">
       ${barsHtml}
     </div>
     <div class="chart-stats">
-      <span>Total: <strong>${formatDuration(totalSeconds)}</strong></span>
-      <span>Days tracked: ${bars.filter((b) => b.duration > 0).length}</span>
+      <span>Total on: <strong>${formatDuration(totalOnSeconds)}</strong></span>
+      <span>Days tracked: ${daysWithData}</span>
+    </div>
+    <div class="chart-legend">
+      <span class="legend-on">■ On</span>
+      <span class="legend-off">■ Off</span>
     </div>
   `;
 }
