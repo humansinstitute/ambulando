@@ -241,6 +241,19 @@ export async function checkOrderStatus(npub: string, orderId: number): Promise<O
 
 function creditUserForOrder(npub: string, order: CreditOrder): UserCredits | null {
   return withCreditTransaction(() => {
+    // Re-fetch order inside transaction to prevent race condition
+    const currentOrder = getCreditOrderById(order.id, npub);
+    if (!currentOrder) {
+      logError("Order not found during credit", { npub, orderId: order.id });
+      return null;
+    }
+
+    // Check if already paid (prevents duplicate credits from concurrent requests)
+    if (currentOrder.status === "paid") {
+      logDebug("credits", `Order ${order.id} already paid, skipping duplicate credit`);
+      return getUserCredits(npub);
+    }
+
     let credits = getUserCredits(npub);
     const balanceBefore = credits?.balance ?? 0;
     const balanceAfter = balanceBefore + order.quantity;
