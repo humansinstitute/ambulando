@@ -9,7 +9,7 @@ export type Session = {
   createdAt: number;
 };
 
-export type LoginMethod = "ephemeral" | "extension" | "bunker" | "secret";
+export type LoginMethod = "ephemeral" | "extension" | "bunker" | "secret" | "keyteleport";
 
 // Credit system types
 export type CreditTransactionType = "initial_grant" | "purchase" | "daily_deduction" | "manual_adjustment";

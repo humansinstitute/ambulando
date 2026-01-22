@@ -31,6 +31,7 @@ ${renderHead()}
     ${renderTimerEditModal()}
     ${renderCreditsModal()}
     ${renderNoCreditsOverlay()}
+    ${renderKeyTeleportOverlay()}
   </main>
   ${renderSessionSeed(session, initialTab, initialDate)}
   <script type="module" src="/app.js"></script>
@@ -420,6 +421,28 @@ function renderNoCreditsOverlay() {
       <p>Purchase credits to continue tracking your habits.</p>
       <p class="no-credits-note">Your existing data is safely stored locally.</p>
       <button type="button" class="no-credits-buy-btn" data-no-credits-buy>Buy Credits</button>
+    </div>
+  </div>`;
+}
+
+function renderKeyTeleportOverlay() {
+  return `<div id="keyteleport-overlay" class="keyteleport-overlay" hidden>
+    <div class="keyteleport-modal">
+      <h2>Complete Login</h2>
+      <p class="keyteleport-description">Paste the unlock code from your clipboard to complete the login.</p>
+      <input
+        type="password"
+        id="keyteleport-unlock-input"
+        class="keyteleport-input"
+        placeholder="nsec1..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <p id="keyteleport-error" class="keyteleport-error" hidden></p>
+      <div class="keyteleport-actions">
+        <button type="button" id="keyteleport-cancel" class="keyteleport-cancel">Cancel</button>
+        <button type="button" id="keyteleport-submit" class="keyteleport-submit">Unlock</button>
+      </div>
     </div>
   </div>`;
 }

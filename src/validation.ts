@@ -62,7 +62,7 @@ export function validateTaskInput(task: {
 }
 
 export function validateLoginMethod(method: string | null): method is LoginMethod {
-  return method === "ephemeral" || method === "extension" || method === "bunker" || method === "secret";
+  return method === "ephemeral" || method === "extension" || method === "bunker" || method === "secret" || method === "keyteleport";
 }
 
 export function validateTodoState(state: string): state is TodoState {

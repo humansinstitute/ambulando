@@ -95,15 +95,19 @@ export async function upsertMeasure(measure) {
   const db = getDB();
   const now = new Date().toISOString();
 
-  // Check if exists
-  const existing = await db.measures.get(measure.id);
-  if (existing) {
-    await db.measures.update(measure.id, { ...measure, syncedAt: now });
-  } else {
-    await db.measures.add({ ...measure, syncedAt: now });
+  // Check if exists (only if id is provided and not a local id)
+  if (measure.id != null) {
+    const existing = await db.measures.get(measure.id);
+    if (existing) {
+      await db.measures.update(measure.id, { ...measure, syncedAt: now });
+      return db.measures.get(measure.id);
+    }
   }
 
-  return db.measures.get(measure.id);
+  // For new records without server ID, use a temporary local ID
+  const localId = measure.id || `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  await db.measures.put({ ...measure, id: localId, syncedAt: now });
+  return db.measures.get(localId);
 }
 
 export async function upsertMeasures(measures) {

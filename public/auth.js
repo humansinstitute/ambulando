@@ -9,6 +9,7 @@ import { debugLog } from "./debug-log.js";
 import { closeAvatarMenu, clearCachedProfile, updateAvatar } from "./avatar.js";
 import { elements as el, hide, show } from "./dom.js";
 import { initEntries } from "./entries.js";
+import { checkKeyTeleport } from "./keyteleport.js";
 import {
   buildUnsignedEvent,
   bytesToHex,
@@ -47,8 +48,12 @@ export const initAuth = () => {
   wireQrModal();
   wireNostrConnectModal();
 
-  void checkFragmentLogin().then(() => {
-    if (!state.session) void maybeAutoLogin();
+  // Check for key teleport first, then fragment login, then auto-login
+  void checkKeyTeleportLogin().then((teleportHandled) => {
+    if (teleportHandled) return;
+    void checkFragmentLogin().then(() => {
+      if (!state.session) void maybeAutoLogin();
+    });
   });
 
   document.addEventListener("visibilitychange", () => {
@@ -56,6 +61,61 @@ export const initAuth = () => {
       void maybeAutoLogin();
     }
   });
+};
+
+/**
+ * Check for key teleport URL param and complete login if present.
+ * Returns true if teleport was handled, false otherwise.
+ */
+const checkKeyTeleportLogin = async () => {
+  // Skip if already logged in
+  if (state.session) {
+    debugLog("auth", "Key teleport skipped - already logged in");
+    // Clear the URL param if present
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("keyteleport")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    return true; // Return true to skip further login attempts
+  }
+
+  // Skip if already have a stored key - let auto-login handle it
+  const existingKey = localStorage.getItem(EPHEMERAL_SECRET_KEY);
+  if (existingKey) {
+    debugLog("auth", "Key teleport skipped - existing key found, using auto-login");
+    // Clear the URL param if present
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("keyteleport")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    return false; // Return false to let auto-login proceed
+  }
+
+  const result = await checkKeyTeleport();
+  if (!result) return false;
+
+  debugLog("auth", "Key teleport successful, completing login as ephemeral...");
+
+  try {
+    const { pure } = await loadNostrLibs();
+    const secretHex = bytesToHex(result.secretKey);
+
+    // Store secret in localStorage - same as ephemeral
+    localStorage.setItem(EPHEMERAL_SECRET_KEY, secretHex);
+
+    // Sign login event as EPHEMERAL - use exact same code path
+    const signedEvent = pure.finalizeEvent(buildUnsignedEvent("ephemeral"), result.secretKey);
+
+    // Complete login as ephemeral - no special handling needed
+    await completeLogin("ephemeral", signedEvent);
+
+    debugLog("auth", "Key teleport login complete (as ephemeral)");
+    return true;
+  } catch (err) {
+    console.error("Key teleport login failed:", err);
+    showError(err?.message || "Key teleport login failed.");
+    return false;
+  }
 };
 
 const wireLoginButtons = () => {
@@ -179,7 +239,7 @@ const wireQrModal = () => {
 
 const openQrModal = async () => {
   if (!el.qrModal || !el.qrContainer) return;
-  if (state.session?.method !== "ephemeral") {
+  if (state.session?.method !== "ephemeral" && state.session?.method !== "keyteleport") {
     alert("Login QR is only available for ephemeral accounts.");
     return;
   }
@@ -888,7 +948,8 @@ const completeLogin = async (method, event, bunkerUriForStorage = null) => {
   // Clear any stale profile cache so we fetch fresh on reload
   clearCachedProfile(session.pubkey);
 
-  if (method === "ephemeral") {
+  if (method === "ephemeral" || method === "keyteleport") {
+    // Both ephemeral and keyteleport use EPHEMERAL_SECRET_KEY for storage
     localStorage.setItem(AUTO_LOGIN_METHOD_KEY, "ephemeral");
     localStorage.setItem(AUTO_LOGIN_PUBKEY_KEY, session.pubkey);
     // Store ephemeral secret in memory for signing
@@ -933,7 +994,7 @@ const completeLogin = async (method, event, bunkerUriForStorage = null) => {
 
 const handleExportSecret = async () => {
   closeAvatarMenu();
-  if (state.session?.method !== "ephemeral") {
+  if (state.session?.method !== "ephemeral" && state.session?.method !== "keyteleport") {
     alert("Export is only available for ephemeral accounts.");
     return;
   }
@@ -962,6 +1023,7 @@ const clearAutoLogin = () => {
   localStorage.removeItem(AUTO_LOGIN_METHOD_KEY);
   localStorage.removeItem(AUTO_LOGIN_PUBKEY_KEY);
   localStorage.removeItem(BUNKER_CONNECTION_KEY);
+  localStorage.removeItem(EPHEMERAL_SECRET_KEY); // Clear ephemeral/keyteleport secret
 };
 
 export const hasBunkerConnection = () => {

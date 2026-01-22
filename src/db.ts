@@ -199,7 +199,9 @@ try {
       config TEXT DEFAULT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`);
-    db.run("INSERT INTO measures_new SELECT * FROM measures");
+    db.run(`INSERT INTO measures_new (id, owner, name, type, encrypted, sort_order, config, created_at)
+      SELECT id, owner, name, type, encrypted, sort_order, config, COALESCE(created_at, CURRENT_TIMESTAMP)
+      FROM measures`);
     db.run("DROP TABLE measures");
     db.run("ALTER TABLE measures_new RENAME TO measures");
     db.run("COMMIT");

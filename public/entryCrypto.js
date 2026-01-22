@@ -24,8 +24,8 @@ export async function encryptEntry(content) {
   const { method, pubkey } = state.session;
   const { nip44, pure, nip46 } = await loadNostrLibs();
 
-  if (method === "ephemeral") {
-    // Use stored ephemeral secret
+  if (method === "ephemeral" || method === "keyteleport") {
+    // Use stored ephemeral secret (keyteleport uses same storage)
     const stored = localStorage.getItem(EPHEMERAL_SECRET_KEY);
     if (!stored) throw new Error("No secret key found");
     const secret = hexToBytes(stored);
@@ -94,8 +94,8 @@ export async function decryptEntry(ciphertext) {
   const { method, pubkey } = state.session;
   const { nip44, pure, nip46 } = await loadNostrLibs();
 
-  if (method === "ephemeral") {
-    // Use stored ephemeral secret
+  if (method === "ephemeral" || method === "keyteleport") {
+    // Use stored ephemeral secret (keyteleport uses same storage)
     const stored = localStorage.getItem(EPHEMERAL_SECRET_KEY);
     if (!stored) throw new Error("No secret key found");
     const secret = hexToBytes(stored);

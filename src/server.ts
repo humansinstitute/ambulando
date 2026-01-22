@@ -23,6 +23,7 @@ import {
 } from "./routes/credits";
 import { handleGetEntries, handleGetRecentEntries, handleSaveEntry } from "./routes/entries";
 import { handleHome, type TabName } from "./routes/home";
+import { handleKeyTeleport } from "./routes/keyteleport";
 import { handleSyncPull, handleSyncPush } from "./routes/sync";
 import { handleTodoCreate, handleTodoDelete, handleTodoState, handleTodoUpdate } from "./routes/todos";
 import {
@@ -180,6 +181,11 @@ const server = Bun.serve({
           const message = body.message || "";
           logDebug(source, message, body.data);
           return new Response("ok", { status: 200 });
+        }
+
+        // Key Teleport endpoint (no session required - this is for login)
+        if (pathname === "/api/keyteleport") {
+          return handleKeyTeleport(req);
         }
       }
 

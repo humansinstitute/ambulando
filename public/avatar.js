@@ -111,8 +111,8 @@ export const updateAvatar = async () => {
   show(el.buyCreditsBtn);
   show(el.copyIdBtn);
 
-  // Show ephemeral-only options
-  if (state.session.method === "ephemeral") {
+  // Show ephemeral-only options (keyteleport also has access to secret key)
+  if (state.session.method === "ephemeral" || state.session.method === "keyteleport") {
     show(el.exportSecretBtn);
     show(el.showLoginQrBtn);
   } else {
@@ -359,7 +359,8 @@ async function publishProfile(metadata) {
   let signedEvent;
 
   // Sign the event based on login method
-  if (state.session.method === "ephemeral") {
+  if (state.session.method === "ephemeral" || state.session.method === "keyteleport") {
+    // Both ephemeral and keyteleport store secret in EPHEMERAL_SECRET_KEY
     const stored = localStorage.getItem(EPHEMERAL_SECRET_KEY);
     if (!stored) throw new Error("No secret key found.");
     const secret = hexToBytes(stored);
