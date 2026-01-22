@@ -1,8 +1,16 @@
 // Measures management for Daily Tracker
+// Now writes to Dexie IndexedDB for offline support and sync
 
 import { elements as el, show, hide, setText } from "./dom.js";
 import { encryptEntry, decryptEntry } from "./entryCrypto.js";
 import { state } from "./state.js";
+import {
+  getMeasures as dbGetMeasures,
+  upsertMeasure as dbUpsertMeasure,
+  upsertMeasures as dbUpsertMeasures,
+  deleteMeasure as dbDeleteMeasure,
+  addPendingMutation,
+} from "./db.js";
 
 let measures = [];
 let editingMeasure = null;
@@ -85,6 +93,18 @@ function handleTypeChange() {
 export async function loadMeasures() {
   if (!state.session) return;
 
+  // First, try to load from Dexie for instant display
+  try {
+    const cachedMeasures = await dbGetMeasures(state.session.npub);
+    if (cachedMeasures && cachedMeasures.length > 0) {
+      measures = await decryptMeasures(cachedMeasures);
+      renderMeasuresList();
+    }
+  } catch (err) {
+    console.log("[measures] No cached measures in Dexie:", err);
+  }
+
+  // Then fetch from server for latest data
   try {
     const response = await fetch("/api/measures");
     if (!response.ok) throw new Error("Failed to fetch measures");
@@ -92,13 +112,24 @@ export async function loadMeasures() {
     const data = await response.json();
     const rawMeasures = data.measures || [];
 
+    // Write to Dexie for offline access
+    if (rawMeasures.length > 0) {
+      const measuresToCache = rawMeasures.map((m) => ({
+        ...m,
+        owner: state.session.npub,
+      }));
+      await dbUpsertMeasures(measuresToCache);
+    }
+
     // Decrypt measure names and configs
     measures = await decryptMeasures(rawMeasures);
     renderMeasuresList();
   } catch (err) {
     console.error("Failed to load measures:", err);
-    measures = [];
-    renderMeasuresList();
+    // Keep showing cached data if we have it
+    if (measures.length === 0) {
+      renderMeasuresList();
+    }
   }
 }
 
@@ -360,26 +391,69 @@ async function handleSaveMeasure(e) {
     const encryptedName = await encryptEntry(name);
     const encryptedConfig = config ? await encryptEntry(JSON.stringify(config)) : null;
 
-    const response = await fetch("/api/measures", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        name: encryptedName,
-        type,
-        encrypted,
-        config: encryptedConfig,
-        sort_order: editingMeasure?.sort_order ?? measures.length,
-      }),
-    });
+    const measureData = {
+      id,
+      owner: state.session.npub,
+      name: encryptedName,
+      type,
+      encrypted,
+      config: encryptedConfig,
+      sort_order: editingMeasure?.sort_order ?? measures.length,
+    };
 
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || "Failed to save measure");
+    // Save to Dexie first (for offline support)
+    const savedMeasure = await dbUpsertMeasure(measureData);
+
+    // Update local state immediately with decrypted values
+    const localMeasure = {
+      ...measureData,
+      id: savedMeasure?.id || id,
+      name, // Use decrypted name for display
+      config: config ? JSON.stringify(config) : null, // Use decrypted config
+    };
+
+    if (id) {
+      // Editing existing
+      const index = measures.findIndex((m) => m.id === id);
+      if (index !== -1) {
+        measures[index] = localMeasure;
+      }
+    } else {
+      // Adding new
+      measures.push(localMeasure);
     }
 
     closeModal();
-    await loadMeasures();
+    renderMeasuresList();
+
+    // Then sync to server
+    try {
+      const response = await fetch("/api/measures", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          name: encryptedName,
+          type,
+          encrypted,
+          config: encryptedConfig,
+          sort_order: editingMeasure?.sort_order ?? measures.length,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update Dexie with server ID if we got one
+        if (data.measure?.id && savedMeasure?.id !== data.measure.id) {
+          await dbUpsertMeasure({ ...measureData, id: data.measure.id });
+        }
+      } else {
+        throw new Error("Server returned error");
+      }
+    } catch (serverErr) {
+      console.error("[measures] Server sync failed, queued for later:", serverErr);
+      await addPendingMutation("measures", "upsert", measureData);
+    }
 
     // Notify tracker to refresh
     window.dispatchEvent(new CustomEvent("measures-changed"));
@@ -392,13 +466,24 @@ async function handleDeleteMeasure(id) {
   if (!confirm("Delete this measure and all its data?")) return;
 
   try {
-    const response = await fetch(`/api/measures/${id}`, {
-      method: "DELETE",
-    });
+    // Delete from Dexie first
+    await dbDeleteMeasure(id);
 
-    if (!response.ok) throw new Error("Failed to delete measure");
+    // Update local state immediately
+    measures = measures.filter((m) => m.id !== id);
+    renderMeasuresList();
 
-    await loadMeasures();
+    // Then sync to server
+    try {
+      const response = await fetch(`/api/measures/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Server returned error");
+    } catch (serverErr) {
+      console.error("[measures] Server delete failed, queued for later:", serverErr);
+      await addPendingMutation("measures", "delete", { id });
+    }
 
     // Notify tracker to refresh
     window.dispatchEvent(new CustomEvent("measures-changed"));
@@ -532,6 +617,18 @@ async function saveNewOrder() {
     id: m.id,
     sort_order: index,
   }));
+
+  // Update Dexie with new sort orders
+  for (const order of orders) {
+    const measure = measures.find((m) => m.id === order.id);
+    if (measure) {
+      await dbUpsertMeasure({
+        ...measure,
+        owner: state.session?.npub,
+        sort_order: order.sort_order,
+      });
+    }
+  }
 
   try {
     const response = await fetch("/api/measures/reorder", {

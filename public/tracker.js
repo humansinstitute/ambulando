@@ -1,9 +1,18 @@
 // Track panel for Daily Tracker
+// Now writes to Dexie IndexedDB for offline support and sync
 
 import { elements as el, show, hide, setText } from "./dom.js";
 import { encryptEntry, decryptEntry } from "./entryCrypto.js";
 import { state } from "./state.js";
 import { updateDailyDate, getCurrentDate } from "./tabs.js";
+import {
+  getMeasures as dbGetMeasures,
+  upsertMeasures as dbUpsertMeasures,
+  getTrackingDataForDate as dbGetTrackingDataForDate,
+  upsertTrackingData as dbUpsertTrackingData,
+  upsertTrackingDataBulk as dbUpsertTrackingDataBulk,
+  addPendingMutation,
+} from "./db.js";
 
 let measures = [];
 let trackingData = {}; // Map of measureId -> tracking record
@@ -91,6 +100,17 @@ async function loadMeasuresAndRender() {
 async function loadMeasures() {
   if (!state.session) return;
 
+  // First, try to load from Dexie for instant display
+  try {
+    const cachedMeasures = await dbGetMeasures(state.session.npub);
+    if (cachedMeasures && cachedMeasures.length > 0) {
+      measures = await decryptMeasures(cachedMeasures);
+    }
+  } catch (err) {
+    console.log("[tracker] No cached measures in Dexie:", err);
+  }
+
+  // Then fetch from server
   try {
     const response = await fetch("/api/measures");
     if (!response.ok) throw new Error("Failed to fetch measures");
@@ -98,11 +118,20 @@ async function loadMeasures() {
     const data = await response.json();
     const rawMeasures = data.measures || [];
 
+    // Write to Dexie for offline access
+    if (rawMeasures.length > 0) {
+      const measuresToCache = rawMeasures.map((m) => ({
+        ...m,
+        owner: state.session.npub,
+      }));
+      await dbUpsertMeasures(measuresToCache);
+    }
+
     // Decrypt measure names and configs
     measures = await decryptMeasures(rawMeasures);
   } catch (err) {
     console.error("Failed to load measures:", err);
-    measures = [];
+    // Keep showing cached data
   }
 }
 
@@ -156,14 +185,60 @@ async function loadTrackingData() {
   const dateStr = getLocalDateString(currentDate);
   trackingData = {};
 
+  // First, try to load from Dexie for instant display
+  try {
+    const cachedData = await dbGetTrackingDataForDate(state.session.npub, dateStr);
+    if (cachedData && cachedData.length > 0) {
+      for (const record of cachedData) {
+        const measure = measures.find((m) => m.id === record.measure_id);
+        if (!measure) continue;
+
+        let value = record.value;
+        if (measure.encrypted && value) {
+          try {
+            value = await decryptEntry(value);
+          } catch (_err) {
+            value = "[Unable to decrypt]";
+          }
+        }
+
+        try {
+          value = JSON.parse(value);
+        } catch (_err) {
+          // Keep as string
+        }
+
+        trackingData[record.measure_id] = {
+          ...record,
+          decryptedValue: value,
+        };
+      }
+      renderTrackList();
+    }
+  } catch (err) {
+    console.log("[tracker] No cached tracking data in Dexie:", err);
+  }
+
+  // Then fetch from server
   try {
     const response = await fetch(`/tracking?date=${dateStr}`);
     if (!response.ok) throw new Error("Failed to fetch tracking data");
 
     const data = await response.json();
+    const serverData = data.data || [];
+
+    // Write to Dexie for offline access
+    if (serverData.length > 0) {
+      const dataToCache = serverData.map((d) => ({
+        ...d,
+        owner: state.session.npub,
+      }));
+      await dbUpsertTrackingDataBulk(dataToCache);
+    }
 
     // Decrypt and organize by measure_id
-    for (const record of data.data || []) {
+    trackingData = {};
+    for (const record of serverData) {
       const measure = measures.find((m) => m.id === record.measure_id);
       if (!measure) continue;
 
@@ -193,6 +268,7 @@ async function loadTrackingData() {
     renderTrackList();
   } catch (err) {
     console.error("Failed to load tracking data:", err);
+    // Keep showing cached data
     renderTrackList();
   }
 }
@@ -601,7 +677,27 @@ async function saveTrackingValue(measureId, value) {
 
   const existingRecord = trackingData[measureId];
   const dateStr = getLocalDateString(currentDate);
+  const recordedAt = existingRecord?.recorded_at || new Date(dateStr + "T12:00:00").toISOString();
 
+  const trackingRecord = {
+    id: existingRecord?.id,
+    owner: state.session.npub,
+    measure_id: measureId,
+    recorded_at: recordedAt,
+    value: valueStr,
+  };
+
+  // Save to Dexie first (for offline support)
+  const savedRecord = await dbUpsertTrackingData(trackingRecord);
+
+  // Update local state immediately
+  trackingData[measureId] = {
+    ...trackingRecord,
+    id: savedRecord?.id || existingRecord?.id,
+    decryptedValue: value,
+  };
+
+  // Then sync to server
   try {
     const response = await fetch("/tracking", {
       method: "POST",
@@ -609,22 +705,28 @@ async function saveTrackingValue(measureId, value) {
       body: JSON.stringify({
         id: existingRecord?.id,
         measure_id: measureId,
-        recorded_at: existingRecord?.recorded_at || new Date(dateStr + "T12:00:00").toISOString(),
+        recorded_at: recordedAt,
         value: valueStr,
       }),
     });
 
-    if (!response.ok) throw new Error("Failed to save tracking data");
-
-    const data = await response.json();
-
-    // Update local state
-    trackingData[measureId] = {
-      ...data.data,
-      decryptedValue: value,
-    };
+    if (response.ok) {
+      const data = await response.json();
+      // Update Dexie with server ID if we got one
+      if (data.data?.id && savedRecord?.id !== data.data.id) {
+        await dbUpsertTrackingData({ ...trackingRecord, id: data.data.id });
+      }
+      // Update local state with server response
+      trackingData[measureId] = {
+        ...data.data,
+        decryptedValue: value,
+      };
+    } else {
+      throw new Error("Server returned error");
+    }
   } catch (err) {
-    console.error("Failed to save tracking data:", err);
+    console.error("[tracker] Server sync failed, queued for later:", err);
+    await addPendingMutation("trackingData", "upsert", trackingRecord);
   }
 }
 
