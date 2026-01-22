@@ -1,8 +1,16 @@
 // Entry management for Three Things journal
+// Now writes to Dexie IndexedDB for offline support and sync
 
 import { elements as el, hide, show, setText } from "./dom.js";
 import { encryptEntry, decryptEntries } from "./entryCrypto.js";
 import { state } from "./state.js";
+import {
+  upsertEntriesBulk,
+  upsertEntry as dbUpsertEntry,
+  getEntriesForDate as dbGetEntriesForDate,
+  getRecentEntries as dbGetRecentEntries,
+  addPendingMutation,
+} from "./db.js";
 
 // Warm, reflective prompts
 const PROMPTS = [
@@ -81,12 +89,32 @@ async function loadTodayEntries() {
   if (!state.session) return;
 
   const date = getTodayDateString();
+
+  // First, try to load from Dexie for instant display
+  try {
+    const cachedEntries = await dbGetEntriesForDate(state.session.npub, date);
+    if (cachedEntries && cachedEntries.length > 0) {
+      todayEntries = await decryptEntries(cachedEntries);
+      renderTodayState();
+    }
+  } catch (err) {
+    console.log("[entries] No cached entries in Dexie:", err);
+  }
+
+  // Then fetch from server for latest data
   try {
     const response = await fetch(`/entries?date=${date}`);
     if (!response.ok) throw new Error("Failed to fetch entries");
 
     const data = await response.json();
     if (data.entries && data.entries.length > 0) {
+      // Write to Dexie for offline access
+      const entriesToCache = data.entries.map((e) => ({
+        ...e,
+        owner: state.session.npub,
+      }));
+      await upsertEntriesBulk(entriesToCache);
+
       todayEntries = await decryptEntries(data.entries);
     } else {
       todayEntries = [];
@@ -95,8 +123,10 @@ async function loadTodayEntries() {
     renderTodayState();
   } catch (err) {
     console.error("Failed to load today's entries:", err);
-    todayEntries = [];
-    renderTodayState();
+    // Keep showing cached data if we have it
+    if (todayEntries.length === 0) {
+      renderTodayState();
+    }
   }
 }
 
@@ -208,21 +238,20 @@ async function handleEntrySubmit(event) {
   try {
     // Encrypt the content
     const encryptedContent = await encryptEntry(content);
+    const entryDate = getTodayDateString();
 
-    // Save to server (upsert handles both new and edit)
-    const response = await fetch("/entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entry_date: getTodayDateString(),
-        slot,
-        encrypted_content: encryptedContent,
-      }),
-    });
+    // Prepare entry data for Dexie
+    const entryData = {
+      owner: state.session.npub,
+      entry_date: entryDate,
+      slot,
+      encrypted_content: encryptedContent,
+    };
 
-    if (!response.ok) throw new Error("Failed to save entry");
+    // Save to Dexie first (for offline support)
+    const savedEntry = await dbUpsertEntry(entryData);
 
-    // Update local state
+    // Update local state immediately
     if (editingSlot !== null) {
       // Editing existing entry
       const index = todayEntries.findIndex((e) => e.slot === editingSlot);
@@ -240,6 +269,33 @@ async function handleEntrySubmit(event) {
     }
 
     renderTodayState();
+
+    // Then sync to server
+    try {
+      const response = await fetch("/entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entry_date: entryDate,
+          slot,
+          encrypted_content: encryptedContent,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update Dexie with server ID if we got one
+        if (data.entry?.id && savedEntry?.id !== data.entry.id) {
+          await dbUpsertEntry({ ...entryData, id: data.entry.id });
+        }
+      } else {
+        throw new Error("Server returned error");
+      }
+    } catch (serverErr) {
+      console.error("[entries] Server sync failed, queued for later:", serverErr);
+      // Queue for later sync
+      await addPendingMutation("entries", "upsert", entryData);
+    }
   } catch (err) {
     console.error("Failed to save entry:", err);
     alert("Failed to save entry. Please try again.");
@@ -258,14 +314,42 @@ async function loadHistory() {
   isLoading = true;
   hide(el.historyLoading);
 
+  // First, try to load from Dexie for instant display (only on first load)
+  if (!lastHistoryDate) {
+    try {
+      const cachedHistory = await dbGetRecentEntries(state.session.npub, today, 30);
+      if (cachedHistory && cachedHistory.length > 0) {
+        const decrypted = await decryptEntries(cachedHistory);
+        historyEntries = decrypted;
+        renderHistory();
+      }
+    } catch (err) {
+      console.log("[entries] No cached history in Dexie:", err);
+    }
+  }
+
+  // Then fetch from server
   try {
     const response = await fetch(`/entries/recent?before=${beforeDate}&limit=30`);
     if (!response.ok) throw new Error("Failed to fetch history");
 
     const data = await response.json();
     if (data.entries && data.entries.length > 0) {
+      // Write to Dexie for offline access
+      const entriesToCache = data.entries.map((e) => ({
+        ...e,
+        owner: state.session.npub,
+      }));
+      await upsertEntriesBulk(entriesToCache);
+
       const decrypted = await decryptEntries(data.entries);
-      historyEntries.push(...decrypted);
+
+      // If this is first load, replace; otherwise append
+      if (!lastHistoryDate) {
+        historyEntries = decrypted;
+      } else {
+        historyEntries.push(...decrypted);
+      }
 
       // Update pagination cursor
       const lastEntry = data.entries[data.entries.length - 1];
@@ -289,6 +373,7 @@ async function loadHistory() {
     }
   } catch (err) {
     console.error("Failed to load history:", err);
+    // Keep showing cached data if we have it
     if (el.historyList && historyEntries.length === 0) {
       el.historyList.innerHTML = '<p class="history-error">Failed to load history.</p>';
     }

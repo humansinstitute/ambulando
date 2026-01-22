@@ -661,7 +661,7 @@ const maybeAutoLogin = async () => {
   }
 
   // Check for encrypted secret login
-  if (method === "secret" && hasEncryptedSecret()) {
+  if (method === "secret" && await hasEncryptedSecret()) {
     try {
       const signedEvent = await signLoginEvent("secret");
       await completeLogin("secret", signedEvent);
@@ -674,7 +674,7 @@ const maybeAutoLogin = async () => {
   }
 
   // Check for encrypted bunker login
-  if (method === "bunker" && hasEncryptedBunker()) {
+  if (method === "bunker" && await hasEncryptedBunker()) {
     try {
       const signedEvent = await signLoginEvent("bunker");
       await completeLogin("bunker", signedEvent);
@@ -745,7 +745,7 @@ const signLoginEvent = async (method, supplemental) => {
       if (bunkerUri) debugLog("Using bunker URI from memory");
     }
 
-    if (!bunkerUri && hasEncryptedBunker()) {
+    if (!bunkerUri && await hasEncryptedBunker()) {
       debugLog("Prompting PIN for encrypted bunker");
       bunkerUri = await promptPinForBunkerDecrypt();
     }
@@ -850,7 +850,7 @@ const signLoginEvent = async (method, supplemental) => {
 
       // Prompt user to create a PIN and encrypt the secret
       secret = await promptPinForNewSecret(secretHex);
-    } else if (!secret && hasEncryptedSecret()) {
+    } else if (!secret && await hasEncryptedSecret()) {
       // We have an encrypted secret - prompt for PIN to decrypt
       secret = await promptPinForDecrypt();
     }
@@ -905,7 +905,7 @@ const completeLogin = async (method, event, bunkerUriForStorage = null) => {
 
     // If this is a new bunker connection, prompt for PIN to store it
     const bunkerUri = bunkerUriForStorage || getMemoryBunkerUri();
-    if (bunkerUri && !hasEncryptedBunker()) {
+    if (bunkerUri && !(await hasEncryptedBunker())) {
       try {
         await promptPinForNewBunker(bunkerUri);
       } catch (err) {

@@ -1,7 +1,7 @@
 // Service Worker for Three Things
 // Caches external libraries and app assets
 
-const CACHE_NAME = "three-things-v17";
+const CACHE_NAME = "three-things-v18";
 
 // External libraries to cache
 const EXTERNAL_LIBS = [
@@ -13,6 +13,10 @@ const EXTERNAL_LIBS = [
   "https://esm.sh/applesauce-core@4.0.0/helpers?bundle",
   "https://esm.sh/rxjs@7.8.1?bundle",
   "https://esm.sh/qrcode@1.5.3",
+  // Dexie for IndexedDB
+  "https://esm.sh/dexie@4.0.11",
+  // Alpine.js for reactive UI
+  "https://esm.sh/alpinejs@3.14.8",
 ];
 
 // HTML page routes - NEVER cache these (they contain session state)
@@ -35,6 +39,7 @@ const LOCAL_ASSETS = [
   "/constants.js",
   "/credits.js",
   "/crypto.js",
+  "/db.js",
   "/dom.js",
   "/entries.js",
   "/entryCrypto.js",
@@ -43,6 +48,7 @@ const LOCAL_ASSETS = [
   "/pullRefresh.js",
   "/sse.js",
   "/state.js",
+  "/stores.js",
   "/tabs.js",
   "/timers.js",
   "/tracker.js",
@@ -123,13 +129,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // For API calls (entries, auth, credits, tracking), always use network
+  // For API calls (entries, auth, credits, tracking, sync), always use network
   if (
     url.pathname.startsWith("/entries") ||
     url.pathname.startsWith("/auth") ||
     url.pathname.startsWith("/api") ||
     url.pathname.startsWith("/tracking") ||
-    url.pathname.startsWith("/events")
+    url.pathname.startsWith("/events") ||
+    url.pathname.startsWith("/sync")
   ) {
     return;
   }

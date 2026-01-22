@@ -23,6 +23,7 @@ import {
 } from "./routes/credits";
 import { handleGetEntries, handleGetRecentEntries, handleSaveEntry } from "./routes/entries";
 import { handleHome, type TabName } from "./routes/home";
+import { handleSyncPull, handleSyncPush } from "./routes/sync";
 import { handleTodoCreate, handleTodoDelete, handleTodoState, handleTodoUpdate } from "./routes/todos";
 import {
   handleGetMeasures,
@@ -77,6 +78,9 @@ const server = Bun.serve({
         if (pathname === "/tracking") return handleGetTracking(url, session);
         if (pathname === "/tracking/timer") return handleGetActiveTimer(session);
         if (pathname === "/tracking/timers/sessions") return handleGetTimerSessions(url, session);
+
+        // Sync endpoint for Dexie client
+        if (pathname === "/sync") return handleSyncPull(url, session);
 
         // Credit endpoints
         if (pathname === "/api/credits") return handleGetCredits(session);
@@ -155,6 +159,7 @@ const server = Bun.serve({
         if (pathname === "/tracking") return handleSaveTracking(req, session);
         if (pathname === "/tracking/timers/start") return handleStartTimer(req, session);
         if (pathname === "/tracking/timers/stop") return handleStopTimer(req, session);
+        if (pathname === "/sync") return handleSyncPush(req, session);
         if (pathname === "/api/credits/initialize") return handleInitializeCredits(session);
         if (pathname === "/api/credits/purchase") return handlePurchaseCredits(req, session);
         if (pathname === "/todos") return handleTodoCreate(req, session);

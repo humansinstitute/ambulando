@@ -7,11 +7,11 @@ import {
   storeEncryptedSecret,
   getEncryptedSecret,
   clearEncryptedSecret,
-  hasEncryptedSecret,
+  hasEncryptedSecret as _hasEncryptedSecret,
   storeEncryptedBunker,
   getEncryptedBunker,
   clearEncryptedBunker,
-  hasEncryptedBunker,
+  hasEncryptedBunker as _hasEncryptedBunker,
 } from "./crypto.js";
 import { bytesToHex, hexToBytes } from "./nostr.js";
 
@@ -466,11 +466,15 @@ export function clearMemoryBunker() {
   }
 }
 
-// Check if there's an encrypted secret stored
-export { hasEncryptedSecret };
+// Check if there's an encrypted secret stored (async wrapper)
+export async function hasEncryptedSecret() {
+  return _hasEncryptedSecret();
+}
 
-// Check if there's an encrypted bunker stored
-export { hasEncryptedBunker };
+// Check if there's an encrypted bunker stored (async wrapper)
+export async function hasEncryptedBunker() {
+  return _hasEncryptedBunker();
+}
 
 // Clear encrypted secret (for logout)
 export function clearStoredSecret() {
