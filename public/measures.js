@@ -112,18 +112,22 @@ export async function loadMeasures() {
     const data = await response.json();
     const rawMeasures = data.measures || [];
 
-    // Write to Dexie for offline access
-    if (rawMeasures.length > 0) {
-      const measuresToCache = rawMeasures.map((m) => ({
-        ...m,
-        owner: state.session.npub,
-      }));
-      await dbUpsertMeasures(measuresToCache);
-    }
-
-    // Decrypt measure names and configs
+    // Decrypt measure names and configs first (this is what we display)
     measures = await decryptMeasures(rawMeasures);
     renderMeasuresList();
+
+    // Then try to write to Dexie for offline access (non-blocking)
+    if (rawMeasures.length > 0) {
+      try {
+        const measuresToCache = rawMeasures.map((m) => ({
+          ...m,
+          owner: state.session.npub,
+        }));
+        await dbUpsertMeasures(measuresToCache);
+      } catch (cacheErr) {
+        console.warn("[measures] Failed to cache to Dexie:", cacheErr);
+      }
+    }
   } catch (err) {
     console.error("Failed to load measures:", err);
     // Keep showing cached data if we have it

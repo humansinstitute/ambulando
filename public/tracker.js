@@ -118,17 +118,21 @@ async function loadMeasures() {
     const data = await response.json();
     const rawMeasures = data.measures || [];
 
-    // Write to Dexie for offline access
-    if (rawMeasures.length > 0) {
-      const measuresToCache = rawMeasures.map((m) => ({
-        ...m,
-        owner: state.session.npub,
-      }));
-      await dbUpsertMeasures(measuresToCache);
-    }
-
-    // Decrypt measure names and configs
+    // Decrypt measure names and configs first (this is what we display)
     measures = await decryptMeasures(rawMeasures);
+
+    // Then try to write to Dexie for offline access (non-blocking)
+    if (rawMeasures.length > 0) {
+      try {
+        const measuresToCache = rawMeasures.map((m) => ({
+          ...m,
+          owner: state.session.npub,
+        }));
+        await dbUpsertMeasures(measuresToCache);
+      } catch (cacheErr) {
+        console.warn("[tracker] Failed to cache measures to Dexie:", cacheErr);
+      }
+    }
   } catch (err) {
     console.error("Failed to load measures:", err);
     // Keep showing cached data
@@ -227,16 +231,7 @@ async function loadTrackingData() {
     const data = await response.json();
     const serverData = data.data || [];
 
-    // Write to Dexie for offline access
-    if (serverData.length > 0) {
-      const dataToCache = serverData.map((d) => ({
-        ...d,
-        owner: state.session.npub,
-      }));
-      await dbUpsertTrackingDataBulk(dataToCache);
-    }
-
-    // Decrypt and organize by measure_id
+    // Decrypt and organize by measure_id first (this is what we display)
     trackingData = {};
     for (const record of serverData) {
       const measure = measures.find((m) => m.id === record.measure_id);
@@ -266,6 +261,19 @@ async function loadTrackingData() {
     }
 
     renderTrackList();
+
+    // Then try to write to Dexie for offline access (non-blocking)
+    if (serverData.length > 0) {
+      try {
+        const dataToCache = serverData.map((d) => ({
+          ...d,
+          owner: state.session.npub,
+        }));
+        await dbUpsertTrackingDataBulk(dataToCache);
+      } catch (cacheErr) {
+        console.warn("[tracker] Failed to cache tracking data to Dexie:", cacheErr);
+      }
+    }
   } catch (err) {
     console.error("Failed to load tracking data:", err);
     // Keep showing cached data
