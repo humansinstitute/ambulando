@@ -1,8 +1,12 @@
-import { nip44, verifyEvent } from "nostr-tools";
+import { finalizeEvent, nip44, verifyEvent } from "nostr-tools";
 
 import { getKeyTeleportIdentity } from "../config";
 import { jsonResponse, safeJson } from "../http";
 import { logDebug, logError } from "../logger";
+
+const KEYTELEPORT_REGISTRATION_KIND = 30078;
+const APP_URL = "https://ambulando.io";
+const APP_NAME = "Ambulando";
 
 /**
  * New v2 payload structure - everything needed is in the blob
@@ -118,4 +122,51 @@ export async function handleKeyTeleport(req: Request): Promise<Response> {
     encryptedNsec: payload.encryptedNsec,
     npub: payload.npub,
   });
+}
+
+/**
+ * Generate a registration blob for connecting Ambulando to a key manager.
+ * The blob is a signed Nostr event containing app info (not encrypted).
+ */
+export function handleKeyTeleportRegister(): Response {
+  logDebug("keyteleport", "Registration blob request");
+
+  const identity = getKeyTeleportIdentity();
+  if (!identity) {
+    logError("[keyteleport] Key Teleport not configured");
+    return jsonResponse({ error: "Key Teleport not configured" }, 503);
+  }
+
+  try {
+    // Create registration content (public info, not encrypted)
+    const content = JSON.stringify({
+      url: APP_URL,
+      name: APP_NAME,
+      description: "Track your daily habits, metrics, and progress",
+    });
+
+    // Create and sign the event
+    const secretKeyBytes = hexToBytes(identity.secretKeyHex);
+    const event = finalizeEvent(
+      {
+        kind: KEYTELEPORT_REGISTRATION_KIND,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [["type", "keyteleport-app-registration"]],
+        content,
+      },
+      secretKeyBytes
+    );
+
+    // Base64 encode
+    const blob = btoa(JSON.stringify(event));
+
+    logDebug("keyteleport", "Registration blob generated", {
+      pubkey: event.pubkey.slice(0, 12) + "...",
+    });
+
+    return jsonResponse({ blob });
+  } catch (err) {
+    logError("[keyteleport] Failed to generate registration blob", err);
+    return jsonResponse({ error: "Failed to generate registration" }, 500);
+  }
 }

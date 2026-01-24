@@ -3564,3 +3564,26 @@ details summary {
 .keyteleport-submit:hover {
   background: var(--accent);
 }
+
+.keyteleport-blob-output {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-family: monospace;
+  background: var(--surface-warm);
+  color: var(--text);
+  resize: none;
+  word-break: break-all;
+}
+
+.keyteleport-blob-output:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.auth-keyteleport {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+}

@@ -196,3 +196,87 @@ function showKeyTeleportError(message) {
   // Use alert for now - could be improved with a toast/notification system
   alert(`Key Teleport Error: ${message}`);
 }
+
+/**
+ * Initialize the Key Teleport setup button handler.
+ * Call this on page load.
+ */
+export function initKeyTeleportSetup() {
+  const setupBtn = document.querySelector("[data-keyteleport-setup]");
+  if (!setupBtn) return;
+
+  setupBtn.addEventListener("click", showKeyTeleportSetup);
+}
+
+/**
+ * Show the Key Teleport setup modal with registration blob.
+ */
+async function showKeyTeleportSetup() {
+  const overlay = document.getElementById("keyteleport-setup-overlay");
+  const blobOutput = document.getElementById("keyteleport-setup-blob");
+  const copyBtn = document.getElementById("keyteleport-setup-copy");
+  const cancelBtn = document.getElementById("keyteleport-setup-cancel");
+  const errorEl = document.getElementById("keyteleport-setup-error");
+
+  if (!overlay || !blobOutput || !copyBtn || !cancelBtn) {
+    debugLog("keyteleport", "Missing setup overlay elements");
+    return;
+  }
+
+  // Reset state
+  blobOutput.value = "Loading...";
+  if (errorEl) hide(errorEl);
+
+  show(overlay);
+
+  try {
+    // Fetch registration blob from server
+    debugLog("keyteleport", "Fetching registration blob...");
+    const response = await fetch("/api/keyteleport/register");
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || "Failed to generate registration");
+    }
+
+    const { blob } = await response.json();
+    blobOutput.value = blob;
+    debugLog("keyteleport", "Registration blob received");
+  } catch (error) {
+    debugLog("keyteleport", "Setup error", { error: error.message });
+    blobOutput.value = "";
+    if (errorEl) {
+      errorEl.textContent = error.message;
+      show(errorEl);
+    }
+  }
+
+  const cleanup = () => {
+    hide(overlay);
+    blobOutput.value = "";
+    copyBtn.onclick = null;
+    cancelBtn.onclick = null;
+    copyBtn.textContent = "Copy Code";
+  };
+
+  copyBtn.onclick = async () => {
+    const value = blobOutput.value;
+    if (!value || value === "Loading...") return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      copyBtn.textContent = "Copied!";
+      debugLog("keyteleport", "Registration blob copied to clipboard");
+      setTimeout(() => {
+        copyBtn.textContent = "Copy Code";
+      }, 2000);
+    } catch {
+      // Fallback: select the text
+      blobOutput.select();
+      document.execCommand("copy");
+      copyBtn.textContent = "Copied!";
+    }
+  };
+
+  cancelBtn.onclick = cleanup;
+}

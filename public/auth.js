@@ -9,7 +9,7 @@ import { debugLog } from "./debug-log.js";
 import { closeAvatarMenu, clearCachedProfile, updateAvatar } from "./avatar.js";
 import { elements as el, hide, show } from "./dom.js";
 import { initEntries } from "./entries.js";
-import { checkKeyTeleport } from "./keyteleport.js";
+import { checkKeyTeleport, initKeyTeleportSetup } from "./keyteleport.js";
 import {
   buildUnsignedEvent,
   bytesToHex,
@@ -47,6 +47,7 @@ export const initAuth = () => {
   wireMenuButtons();
   wireQrModal();
   wireNostrConnectModal();
+  initKeyTeleportSetup();
 
   // Check for key teleport first, then fragment login, then auto-login
   void checkKeyTeleportLogin().then((teleportHandled) => {

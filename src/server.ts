@@ -23,7 +23,7 @@ import {
 } from "./routes/credits";
 import { handleGetEntries, handleGetRecentEntries, handleSaveEntry } from "./routes/entries";
 import { handleHome, type TabName } from "./routes/home";
-import { handleKeyTeleport } from "./routes/keyteleport";
+import { handleKeyTeleport, handleKeyTeleportRegister } from "./routes/keyteleport";
 import { handleSyncPull, handleSyncPush } from "./routes/sync";
 import { handleTodoCreate, handleTodoDelete, handleTodoState, handleTodoUpdate } from "./routes/todos";
 import {
@@ -89,6 +89,11 @@ const server = Bun.serve({
         if (pathname === "/api/credits/history") return handleGetTransactionHistory(session);
         const orderStatusMatch = pathname.match(/^\/api\/credits\/order\/(\d+)\/status$/);
         if (orderStatusMatch) return handleCheckOrderStatus(session, Number(orderStatusMatch[1]));
+
+        // Key Teleport registration (no session required - for connecting app)
+        if (pathname === "/api/keyteleport/register") {
+          return handleKeyTeleportRegister();
+        }
 
         // SSE endpoint for real-time updates
         if (pathname === "/events") {

@@ -32,6 +32,7 @@ ${renderHead()}
     ${renderCreditsModal()}
     ${renderNoCreditsOverlay()}
     ${renderKeyTeleportOverlay()}
+    ${renderKeyTeleportSetupModal()}
   </main>
   ${renderSessionSeed(session, initialTab, initialDate)}
   <script type="module" src="/app.js"></script>
@@ -91,6 +92,7 @@ function renderAuth(session: Session | null) {
     <div class="auth-actions">
       <button class="auth-option" type="button" data-login-method="ephemeral">Ambulando... Anon</button>
       <button class="auth-option" type="button" data-login-method="extension">Browser Extension</button>
+      <button class="auth-option auth-keyteleport" type="button" data-keyteleport-setup>Key Teleport</button>
     </div>
     <details class="auth-advanced">
       <summary>More sign-in options</summary>
@@ -442,6 +444,27 @@ function renderKeyTeleportOverlay() {
       <div class="keyteleport-actions">
         <button type="button" id="keyteleport-cancel" class="keyteleport-cancel">Cancel</button>
         <button type="button" id="keyteleport-submit" class="keyteleport-submit">Unlock</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderKeyTeleportSetupModal() {
+  return `<div id="keyteleport-setup-overlay" class="keyteleport-overlay" hidden>
+    <div class="keyteleport-modal keyteleport-setup-modal">
+      <h2>Setup Key Teleport</h2>
+      <p class="keyteleport-description">Copy this registration code and paste it into your key manager (e.g., Welcome) to connect Ambulando.</p>
+      <textarea
+        id="keyteleport-setup-blob"
+        class="keyteleport-blob-output"
+        readonly
+        rows="4"
+        placeholder="Loading..."
+      ></textarea>
+      <p id="keyteleport-setup-error" class="keyteleport-error" hidden></p>
+      <div class="keyteleport-actions">
+        <button type="button" id="keyteleport-setup-cancel" class="keyteleport-cancel">Cancel</button>
+        <button type="button" id="keyteleport-setup-copy" class="keyteleport-submit">Copy Code</button>
       </div>
     </div>
   </div>`;
