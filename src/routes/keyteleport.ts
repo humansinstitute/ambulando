@@ -1,23 +1,17 @@
 import { nip44, verifyEvent } from "nostr-tools";
 
-import {
-  getKeyTeleportIdentity,
-  getKeyTeleportWelcomePubkey,
-} from "../config";
+import { getKeyTeleportIdentity } from "../config";
 import { jsonResponse, safeJson } from "../http";
 import { logDebug, logError } from "../logger";
 
+/**
+ * New v2 payload structure - everything needed is in the blob
+ * No fetch from sender required
+ */
 interface KeyTeleportPayload {
-  apiRoute: string;
-  hash_id: string;
-  timestamp: number;
-  npub?: string;
-}
-
-interface KeyManagerResponse {
-  encryptedNsec?: string;
-  encryptsec?: string; // v1 format
-  npub: string;
+  encryptedNsec: string; // NIP-44 encrypted (inner layer: user key + throwaway pubkey)
+  npub: string; // User's public key
+  v: number; // Protocol version (1)
 }
 
 // Convert hex string to Uint8Array
@@ -34,16 +28,14 @@ export async function handleKeyTeleport(req: Request): Promise<Response> {
 
   // 1. Check if key teleport is configured
   const identity = getKeyTeleportIdentity();
-  const welcomePubkey = getKeyTeleportWelcomePubkey();
 
-  if (!identity || !welcomePubkey) {
+  if (!identity) {
     logError("[keyteleport] Key Teleport not configured");
     return jsonResponse({ error: "Key Teleport not configured" }, 503);
   }
 
   logDebug("keyteleport", "Config loaded", {
     ourPubkey: identity.pubkey.slice(0, 12) + "...",
-    welcomePubkey: welcomePubkey.slice(0, 12) + "...",
   });
 
   // 2. Parse request body
@@ -67,24 +59,18 @@ export async function handleKeyTeleport(req: Request): Promise<Response> {
     return jsonResponse({ error: "Invalid blob encoding" }, 400);
   }
 
-  // 4. Verify event signature
+  // 4. Verify event signature (proves authenticity)
   if (!verifyEvent(event)) {
     logDebug("keyteleport", "Invalid event signature");
     return jsonResponse({ error: "Invalid event signature" }, 400);
   }
 
-  // 5. Verify event is from trusted Welcome pubkey
-  if (event.pubkey !== welcomePubkey) {
-    logDebug("keyteleport", "Untrusted signer", {
-      expected: welcomePubkey.slice(0, 12) + "...",
-      got: event.pubkey?.slice(0, 12) + "...",
-    });
-    return jsonResponse({ error: "Untrusted signer" }, 403);
-  }
+  logDebug("keyteleport", "Signature verified", {
+    senderPubkey: event.pubkey?.slice(0, 12) + "...",
+  });
 
-  logDebug("keyteleport", "Signature verified from Welcome");
-
-  // 6. Decrypt NIP-44 payload
+  // 5. Decrypt NIP-44 payload using our app key
+  // Note: No "p" tag check - decryption success = blob was intended for us
   let payload: KeyTeleportPayload;
   try {
     // NIP-44 getConversationKey expects: secretKey as Uint8Array, pubkey as hex string
@@ -92,89 +78,44 @@ export async function handleKeyTeleport(req: Request): Promise<Response> {
 
     const conversationKey = nip44.v2.utils.getConversationKey(
       ourSecretBytes,
-      event.pubkey // Keep as hex string
+      event.pubkey // Sender's pubkey (hex string)
     );
     const decrypted = nip44.v2.decrypt(event.content, conversationKey);
     payload = JSON.parse(decrypted);
+
     logDebug("keyteleport", "Decrypted payload", {
-      apiRoute: payload.apiRoute,
-      hash_id: payload.hash_id?.slice(0, 8) + "...",
-      timestamp: payload.timestamp,
       npub: payload.npub?.slice(0, 12) + "...",
+      hasEncryptedNsec: !!payload.encryptedNsec,
+      version: payload.v,
     });
   } catch (err) {
-    logError("[keyteleport] Failed to decrypt payload", err);
-    return jsonResponse({ error: "Failed to decrypt payload" }, 400);
+    // NIP-44 auth failure means wrong key - this blob isn't for us
+    logError("[keyteleport] Decryption failed - blob may be for a different app", err);
+    return jsonResponse({ error: "Decryption failed - wrong recipient?" }, 400);
   }
 
-  // 7. Validate timestamp (check it hasn't expired)
-  const now = Math.floor(Date.now() / 1000);
-  logDebug("keyteleport", "Timestamp validation", {
-    payloadTimestamp: payload.timestamp,
-    now,
-    diff: payload.timestamp - now,
-  });
-
-  if (payload.timestamp < now) {
-    logDebug("keyteleport", "Link expired", {
-      expiresAt: payload.timestamp,
-      now,
-      expiredBy: now - payload.timestamp,
-    });
-    return jsonResponse({ error: "Link expired" }, 410);
+  // 6. Validate protocol version
+  if (payload.v !== 1) {
+    logDebug("keyteleport", "Unsupported protocol version", { version: payload.v });
+    return jsonResponse({ error: `Unsupported protocol version: ${payload.v}` }, 400);
   }
 
-  // 8. Fetch encrypted key from Welcome
-  let keyData: KeyManagerResponse;
-  try {
-    const keyUrl = `${payload.apiRoute}?id=${payload.hash_id}`;
-    logDebug("keyteleport", "Fetching key from Welcome", { url: keyUrl });
-
-    const response = await fetch(keyUrl);
-
-    if (response.status === 404) {
-      logDebug("keyteleport", "Key not found or already used");
-      return jsonResponse({ error: "Key not found or already used" }, 404);
-    }
-
-    if (!response.ok) {
-      logDebug("keyteleport", "Key manager error", {
-        status: response.status,
-        statusText: response.statusText,
-      });
-      return jsonResponse({ error: "Key manager error" }, 502);
-    }
-
-    keyData = await response.json();
-    logDebug("keyteleport", "Key data received", {
-      hasEncryptedNsec: !!keyData.encryptedNsec,
-      hasEncryptsec: !!keyData.encryptsec,
-      npub: keyData.npub?.slice(0, 12) + "...",
+  // 7. Validate payload has required fields
+  if (!payload.encryptedNsec || !payload.npub) {
+    logDebug("keyteleport", "Invalid payload - missing required fields", {
+      hasEncryptedNsec: !!payload.encryptedNsec,
+      hasNpub: !!payload.npub,
     });
-  } catch (err) {
-    logError("[keyteleport] Key manager unreachable", err);
-    return jsonResponse({ error: "Key manager unreachable" }, 502);
-  }
-
-  // 9. Return encrypted nsec + npub to client
-  // Support both v1 (encryptsec) and v2 (encryptedNsec) formats
-  const encryptedNsec = keyData.encryptedNsec || keyData.encryptsec;
-  const npub = keyData.npub || payload.npub;
-
-  if (!encryptedNsec || !npub) {
-    logDebug("keyteleport", "Invalid key data from Welcome", {
-      hasEncryptedNsec: !!encryptedNsec,
-      hasNpub: !!npub,
-    });
-    return jsonResponse({ error: "Invalid key data" }, 502);
+    return jsonResponse({ error: "Invalid payload" }, 400);
   }
 
   logDebug("keyteleport", "Key teleport successful", {
-    npub: npub.slice(0, 12) + "...",
+    npub: payload.npub.slice(0, 12) + "...",
   });
 
+  // 8. Return encrypted nsec + npub to client for inner layer decryption
   return jsonResponse({
-    encryptedNsec,
-    npub,
+    encryptedNsec: payload.encryptedNsec,
+    npub: payload.npub,
   });
 }

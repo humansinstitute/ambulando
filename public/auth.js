@@ -64,16 +64,15 @@ export const initAuth = () => {
 };
 
 /**
- * Check for key teleport URL param and complete login if present.
+ * Check for key teleport URL fragment and complete login if present.
  * Returns true if teleport was handled, false otherwise.
  */
 const checkKeyTeleportLogin = async () => {
   // Skip if already logged in
   if (state.session) {
     debugLog("auth", "Key teleport skipped - already logged in");
-    // Clear the URL param if present
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("keyteleport")) {
+    // Clear the URL fragment if present
+    if (window.location.hash.includes("keyteleport=")) {
       window.history.replaceState({}, "", window.location.pathname);
     }
     return true; // Return true to skip further login attempts
@@ -83,9 +82,8 @@ const checkKeyTeleportLogin = async () => {
   const existingKey = localStorage.getItem(EPHEMERAL_SECRET_KEY);
   if (existingKey) {
     debugLog("auth", "Key teleport skipped - existing key found, using auto-login");
-    // Clear the URL param if present
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("keyteleport")) {
+    // Clear the URL fragment if present
+    if (window.location.hash.includes("keyteleport=")) {
       window.history.replaceState({}, "", window.location.pathname);
     }
     return false; // Return false to let auto-login proceed

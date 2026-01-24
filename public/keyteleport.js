@@ -1,31 +1,39 @@
 import { debugLog } from "./debug-log.js";
-import { loadNostrLibs, bytesToHex, hexToBytes } from "./nostr.js";
+import { loadNostrLibs } from "./nostr.js";
 import { hide, show } from "./dom.js";
 
 /**
- * Check for key teleport URL parameter and process if present.
+ * Check for key teleport URL fragment and process if present.
+ * Uses fragment URL (#keyteleport=...) so server never sees the blob.
  * Returns { secretKey: Uint8Array, npub: string } on success, null otherwise.
  */
 export async function checkKeyTeleport() {
-  const params = new URLSearchParams(window.location.search);
+  // Read from fragment (hash), not query params
+  const hash = window.location.hash;
+  if (!hash.includes("keyteleport=")) return null;
+
+  // Parse fragment as URL params
+  const params = new URLSearchParams(hash.slice(1));
   const blob = params.get("keyteleport");
 
   if (!blob) return null;
 
-  debugLog("keyteleport", "Key teleport param detected");
+  debugLog("keyteleport", "Key teleport fragment detected");
 
-  // Clear URL params immediately (replay prevention)
-  const cleanUrl = window.location.pathname;
-  window.history.replaceState({}, "", cleanUrl);
-  debugLog("keyteleport", "URL params cleared");
+  // Clear URL fragment immediately (replay prevention)
+  window.history.replaceState({}, "", window.location.pathname);
+  debugLog("keyteleport", "URL fragment cleared");
 
   try {
-    // 1. Send blob to server for verification & key fetch
-    debugLog("keyteleport", "Sending blob to server...");
+    // URL-decode the blob (it was encoded for safe URL transport)
+    const decodedBlob = decodeURIComponent(blob);
+
+    // 1. Send blob to server for verification & decryption
+    debugLog("keyteleport", "Sending blob to server for decryption...");
     const response = await fetch("/api/keyteleport", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ blob }),
+      body: JSON.stringify({ blob: decodedBlob }),
     });
 
     if (!response.ok) {
@@ -69,9 +77,9 @@ export async function checkKeyTeleport() {
     const userPubkey = npubDecoded.data;
     debugLog("keyteleport", "User pubkey decoded", { pubkey: userPubkey.slice(0, 12) + "..." });
 
-    // 6. Create NIP-44 conversation key
-    const throwawayHex = bytesToHex(throwawaySecretKey);
-    const conversationKey = nip44.v2.utils.getConversationKey(throwawayHex, userPubkey);
+    // 6. Create NIP-44 conversation key (throwaway secret + user pubkey)
+    // Note: getConversationKey expects secretKey as Uint8Array, pubkey as hex string
+    const conversationKey = nip44.v2.utils.getConversationKey(throwawaySecretKey, userPubkey);
     debugLog("keyteleport", "Conversation key created");
 
     // 7. Decrypt the nsec
